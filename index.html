@@ -2,10 +2,11 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LLM Anket Yanıtlama Aracı</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Yapay Zekâ ile Anket Yanıtlama</title>
+<meta name="theme-color" content="#F7F9FB">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --ink:#16324F; --slate:#33465A; --mist:#6B7C8E;
@@ -16,47 +17,43 @@
   --ok-bg:#EAF6EE; --ok-tx:#1E6B3A;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--paper);color:var(--slate);font-size:15.5px;line-height:1.55}
-.wrap{max-width:680px;margin:0 auto;padding:28px 18px 80px}
-header{margin-bottom:24px}
-.kicker{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;color:var(--teal);text-transform:uppercase;margin-bottom:8px}
-h1{font-family:'Sora',sans-serif;font-size:clamp(22px,4.5vw,28px);color:var(--ink);line-height:1.25;font-weight:700}
-.sub{color:var(--mist);margin-top:8px;font-size:14px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;margin-bottom:16px}
-.card h2{font-family:'Sora',sans-serif;font-size:16px;color:var(--ink);margin-bottom:4px;display:flex;align-items:center;gap:10px}
-.num{font-family:'IBM Plex Mono',monospace;font-size:12px;width:26px;height:26px;border-radius:7px;background:var(--teal-soft);color:var(--teal-dk);display:inline-flex;align-items:center;justify-content:center;flex:none}
-.hint{font-size:13px;color:var(--mist);margin-bottom:14px}
-label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin:12px 0 5px}
-label small{font-weight:400;color:var(--mist)}
-input,select,textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font:inherit;color:var(--slate);background:#fff}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:var(--teal)}
-textarea{min-height:90px;resize:vertical}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
-@media(max-width:520px){.grid2{grid-template-columns:1fr}}
-.note{border-radius:8px;padding:11px 13px;font-size:13px;margin:12px 0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--paper);color:var(--slate);font-size:16px;line-height:1.5}
+.wrap{max-width:560px;margin:0 auto;padding:24px 16px calc(40px + env(safe-area-inset-bottom))}
+h1{font-family:'Sora',sans-serif;font-size:24px;color:var(--ink);line-height:1.25;font-weight:700}
+.sub{color:var(--mist);margin-top:6px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px}
+label{display:block;font-size:14px;font-weight:600;color:var(--ink);margin:16px 0 6px}
+label:first-of-type{margin-top:0}
+label .opt{font-weight:400;color:var(--mist)}
+input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px;color:var(--slate);background:#fff;min-height:48px}
+input:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:var(--teal)}
+.keylinks{font-size:13px;color:var(--mist);margin-top:6px}
+.keylinks a{color:var(--teal-dk);font-weight:600;text-decoration:none}
+.note{border-radius:10px;padding:12px 14px;font-size:14px;margin-top:12px}
 .note.warn{background:var(--warn-bg);border:1px solid var(--warn-bd);color:var(--warn-tx)}
 .note.err{background:var(--err-bg);color:var(--err-tx);border:1px solid #E7B9B9}
 .note.ok{background:var(--ok-bg);color:var(--ok-tx);border:1px solid #BBDEC7}
-button{font:inherit;font-weight:600;border:none;border-radius:8px;padding:12px 20px;cursor:pointer;width:100%;margin-top:14px}
+button{font:inherit;font-size:16px;font-weight:600;border:none;border-radius:10px;padding:14px 20px;min-height:52px;cursor:pointer;width:100%;margin-top:16px;-webkit-tap-highlight-color:transparent}
 button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .primary{background:var(--teal);color:#fff}
-.primary:hover{background:var(--teal-dk)}
+.primary:active{background:var(--teal-dk)}
 .primary:disabled{background:#9DBFBE;cursor:not-allowed}
 .ghost{background:transparent;color:var(--slate);border:1.5px solid var(--line)}
-.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:8px}
+.pick{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.pick button{width:auto;flex:1;min-height:44px;margin-top:0;padding:10px;font-size:14px;background:#fff;border:1.5px solid var(--line);color:var(--slate)}
+.pick button:active{border-color:var(--teal);color:var(--teal-dk)}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px;margin-right:8px}
 @keyframes sp{to{transform:rotate(360deg)}}
-details{margin-top:12px}
-summary{font-size:13px;color:var(--teal-dk);cursor:pointer;font-weight:600}
-.qlist{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:12px}
-.qi{padding:11px 13px;border-bottom:1px solid var(--line);background:#fff}
-.qi:last-child{border-bottom:none}
-.qt{font-size:13.5px;color:var(--ink);font-weight:500}
-.qm{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mist);margin-top:2px}
-.qa{margin-top:6px;font-size:13.5px;color:var(--teal-dk);background:var(--teal-soft);border-radius:6px;padding:7px 10px;white-space:pre-wrap}
-.badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--mist);margin-left:6px}
-.done-big{text-align:center;padding:30px 16px}
-.done-big .mark{width:60px;height:60px;border-radius:50%;background:var(--teal);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
-footer{margin-top:32px;font-size:12px;color:var(--mist);text-align:center;line-height:1.6}
+.alist{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:14px}
+.ai{padding:12px 14px;border-bottom:1px solid var(--line)}
+.ai:last-child{border-bottom:none}
+.aq{font-size:13.5px;color:var(--mist)}
+.aa{font-size:15px;color:var(--ink);margin-top:4px;white-space:pre-wrap}
+.done{text-align:center;padding:28px 12px 10px}
+.done .mark{width:64px;height:64px;border-radius:50%;background:var(--teal);color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.done h2{font-family:'Sora',sans-serif;color:var(--ink);font-size:20px}
+footer{margin-top:28px;font-size:12px;color:var(--mist);text-align:center;line-height:1.6}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
@@ -64,81 +61,70 @@ footer{margin-top:32px;font-size:12px;color:var(--mist);text-align:center;line-h
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">Sentetik Öğrenci Sesi Araştırması</div>
-  <h1>Anketi yapay zekânız yanıtlasın</h1>
-  <p class="sub">Araştırmacının size gönderdiği Google Forms linkini yapıştırın; kullandığınız yapay zekâ anketi sizin yerinize yanıtlayıp gönderecek. API anahtarınız yalnızca tarayıcınızda kalır — hiçbir sunucuya kaydedilmez.</p>
+  <h1>Anketi yapay zekân yanıtlasın</h1>
+  <p class="sub">Sana gönderilen anket linkini ve yapay zekâ API anahtarını gir; gerisini araç halleder. Anahtarın yalnızca senin tarayıcında kalır.</p>
 </header>
 
-<!-- 1: API -->
-<div class="card">
-  <h2><span class="num">1</span>Yapay zekâ erişiminiz</h2>
-  <p class="hint">Kullandığınız yapay zekânın API anahtarını yapıştırmanız yeterli — sağlayıcı ve model otomatik belirlenir. Anahtar, tarayıcınızdan doğrudan yapay zekâ sağlayıcısına gönderilir; bu sayfada saklanmaz.</p>
-  <label for="akey">API anahtarı</label>
-  <input type="password" id="akey" autocomplete="off" placeholder="API anahtarınızı yapıştırın" oninput="detectProvider()">
-  <div id="provInfo" class="note ok" hidden></div>
-  <div id="provPick" hidden style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-    <button type="button" class="ghost" style="width:auto;margin-top:0;padding:8px 14px" onclick="pickProv('gemini')">Gemini</button>
-    <button type="button" class="ghost" style="width:auto;margin-top:0;padding:8px 14px" onclick="pickProv('openai')">OpenAI / ChatGPT</button>
-    <button type="button" class="ghost" style="width:auto;margin-top:0;padding:8px 14px" onclick="pickProv('anthropic')">Claude</button>
+<div class="card" id="mainCard">
+  <label for="akey">Yapay zekâ API anahtarın</label>
+  <input type="password" id="akey" autocomplete="off" placeholder="API anahtarını yapıştır" oninput="detectProvider()">
+  <div class="keylinks">Anahtarın yok mu? <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Gemini'den ücretsiz al</a></div>
+  <div id="provInfo" class="note" hidden></div>
+  <div id="provPick" class="pick" hidden>
+    <button type="button" onclick="pickProv('gemini')">Gemini</button>
+    <button type="button" onclick="pickProv('openai')">ChatGPT</button>
+    <button type="button" onclick="pickProv('anthropic')">Claude</button>
   </div>
-  <p class="hint" style="margin-top:10px">Anahtarınız yok mu? Buradan alabilirsiniz:
-    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--teal-dk);font-weight:600">Gemini (ücretsiz)</a> ·
-    <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:var(--teal-dk)">OpenAI</a> ·
-    <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--teal-dk)">Claude</a>
-  </p>
+
+  <label for="flink">Anket linki</label>
+  <input type="url" id="flink" autocomplete="off" inputmode="url" placeholder="https://forms.gle/…">
+
+  <label for="anon">Anonim kodun <span class="opt">· istenmediyse boş bırak</span></label>
+  <input type="text" id="anon" autocomplete="off" placeholder="ör. AY0342">
+
+  <div id="ebox" class="note err" hidden></div>
+  <button class="primary" id="btnGo" onclick="prepare()">Yapay zekâ yanıtlasın</button>
+
+  <div id="preview" hidden>
+    <div class="note ok" id="okline"></div>
+    <div class="alist" id="answers"></div>
+    <button class="primary" id="btnSend" onclick="submitForm()">Yanıtları gönder</button>
+    <button class="ghost" id="btnRetry" onclick="prepare(true)">Beğenmedim, yeniden yanıtla</button>
+  </div>
 </div>
 
-<!-- 2: Link -->
-<div class="card">
-  <h2><span class="num">2</span>Anket linki</h2>
-  <p class="hint">Araştırmacının gönderdiği Google Forms linkini yapıştırın.</p>
-  <label for="flink">Google Forms linki</label>
-  <input type="text" id="flink" autocomplete="off" placeholder="https://forms.gle/… veya https://docs.google.com/forms/…">
-  <label for="anon">Anonim kodunuz <small>(araştırmacı sizden bir kod istediyse; formda kod sorusu varsa otomatik yazılır)</small></label>
-  <input type="text" id="anon" autocomplete="off" placeholder="isteğe bağlı — ör. AY0342">
-  <div id="e2" class="note err" hidden></div>
-  <div id="ok2" class="note ok" hidden></div>
-  <button class="primary" id="btnFetch" onclick="fetchForm()">Anketi getir</button>
-  <div id="qprev"></div>
-</div>
-
-<!-- 3: Üret + Gönder -->
-<div class="card" id="genCard" hidden>
-  <h2><span class="num">3</span>Yanıtla ve gönder</h2>
-  <p class="hint">Yapay zekânın ürettiği yanıtlar aşağıda listelenir; beğenmezseniz yeniden üretebilirsiniz. Gönderdiğinizde yanıtlar doğrudan ankete iletilir.</p>
-  <div id="e4" class="note err" hidden></div>
-  <button class="primary" id="btnGen" onclick="generate()">Yanıtları üret</button>
-  <div id="answers"></div>
-  <div id="e5" class="note err" hidden></div>
-  <button class="primary" id="btnSend" onclick="submitForm()" hidden>Yanıtları ankete gönder</button>
-</div>
-
-<!-- Done -->
-<div class="card done-big" id="doneCard" hidden>
+<div class="card done" id="doneCard" hidden>
   <div class="mark">✓</div>
-  <h2 style="justify-content:center">Gönderildi — teşekkür ederiz</h2>
-  <p class="hint" style="margin-top:8px">Yapay zekânızın ürettiği yanıtlar ankete iletildi.</p>
-  <button class="ghost" onclick="downloadLog()">Üretim kaydını indir (JSON)</button>
+  <h2>Gönderildi, teşekkürler!</h2>
+  <p class="sub" style="margin-top:8px">Yanıtlar ankete iletildi. Bu sayfayı kapatabilirsin.</p>
+  <button class="ghost" onclick="downloadLog()">Kayıt dosyasını indir</button>
 </div>
 
-<footer>Bu araç bir bilimsel araştırma kapsamında kullanılmaktadır. Girdiğiniz bilgiler bu sayfa dışına yalnızca seçtiğiniz yapay zekâ sağlayıcısına ve (yanıtlar olarak) araştırma anketine gider. Sorularınız için araştırmacıya başvurunuz.</footer>
+<footer>Bu araç bir bilimsel araştırma kapsamında kullanılmaktadır. Girdiğin bilgiler yalnızca seçtiğin yapay zekâ sağlayıcısına ve (yanıtlar olarak) ankete gider. Soruların için araştırmacına ulaş.</footer>
 </div>
 
-<iframe name="gf_sink" id="gf_sink" style="display:none" title="gönderim"></iframe>
+<iframe name="gf_sink" style="display:none" title="gönderim"></iframe>
 
 <script>
 "use strict";
-const S = { formUrl:"", formTitle:"", formId:"", pages:1, questions:[], answers:null, attempts:0, provider:"gemini", model:"", log:[] };
+/* ====== yapılandırma (araştırmacı) ====== */
+// Form okuma aracısı: kendi Apps Script proxy'niz. ?proxy= URL parametresiyle geçersiz kılınabilir.
+const DEFAULT_PROXY = "https://script.google.com/macros/s/AKfycbxdPBSNfz6gE6B06by3eKjAeZcEYcaM6FwEAotpXmLv3FIYV2nxdAiETIPHqrlueSm-og/exec";
+const CUSTOM_PROXY_BASE = (function(){
+  let p = (new URLSearchParams(location.search).get("proxy") || "").trim() || DEFAULT_PROXY;
+  return p.replace(/[?&]url=$/,"");
+})();
+
+const S = { formUrl:"", formTitle:"", formId:"", pages:1, questions:[], answers:null, attempts:0, provider:null, providerManual:false, model:"", log:[] };
 
 const MODEL_CHAIN = {
   gemini:    ["gemini-2.5-flash","gemini-2.0-flash","gemini-1.5-flash"],
   openai:    ["gpt-4o-mini","gpt-4o","gpt-4.1-mini"],
   anthropic: ["claude-sonnet-4-6","claude-haiku-4-5-20251001","claude-3-5-haiku-latest"]
 };
-const PROVNAME = {gemini:"Google Gemini", openai:"OpenAI (ChatGPT)", anthropic:"Anthropic (Claude)"};
-function cleanKey(raw){
-  return String(raw||"").replace(/[\s"'\u200B-\u200D\uFEFF]/g,"");
-}
+const PROVNAME = {gemini:"Gemini", openai:"ChatGPT (OpenAI)", anthropic:"Claude"};
+
+function cleanKey(raw){ return String(raw||"").replace(/[\s"'\u200B-\u200D\uFEFF]/g,""); }
 function whichProvider(key){
   if(/AIza[0-9A-Za-z_\-]{20,}/.test(key)) return "gemini";
   if(/^sk-ant-/.test(key)) return "anthropic";
@@ -149,50 +135,37 @@ function detectProvider(){
   const key = cleanKey(document.getElementById("akey").value);
   const box = document.getElementById("provInfo");
   const pick = document.getElementById("provPick");
-  if(!key){ box.hidden=true; pick.hidden=true; S.provider=null; return; }
+  if(!key){ box.hidden=true; pick.hidden=true; S.provider=null; S.providerManual=false; return; }
   const p = whichProvider(key);
   if(p){
-    S.provider = p; S.providerManual = false;
-    box.className = "note ok";
-    box.textContent = "✓ " + PROVNAME[p] + " anahtarı algılandı — model otomatik seçilecek.";
-    box.hidden = false; pick.hidden = true;
+    S.provider=p; S.providerManual=false;
+    box.className="note ok"; box.textContent="✓ "+PROVNAME[p]+" anahtarı algılandı";
+    box.hidden=false; pick.hidden=true;
   } else if(S.providerManual && S.provider){
-    box.className = "note ok";
-    box.textContent = "✓ Sağlayıcı elle seçildi: " + PROVNAME[S.provider] + ".";
-    box.hidden = false; pick.hidden = false;
+    box.className="note ok"; box.textContent="✓ Seçildi: "+PROVNAME[S.provider];
+    box.hidden=false; pick.hidden=false;
   } else {
-    S.provider = null;
-    box.className = "note warn";
-    box.textContent = "Anahtar türü otomatik tanınamadı. Sorun değil — aşağıdan hangi yapay zekâyı kullandığınızı seçmeniz yeterli:";
-    box.hidden = false; pick.hidden = false;
+    S.provider=null;
+    box.className="note warn"; box.textContent="Hangi yapay zekâyı kullanıyorsun? Aşağıdan seç:";
+    box.hidden=false; pick.hidden=false;
   }
 }
-function pickProv(p){
-  S.provider = p; S.providerManual = true;
-  detectProvider();
-}
-function err(id,msg){const e=document.getElementById(id); if(!msg){e.hidden=true;return;} e.textContent=msg; e.hidden=false;}
+function pickProv(p){ S.provider=p; S.providerManual=true; detectProvider(); }
+function showErr(msg){ const e=document.getElementById("ebox"); if(!msg){e.hidden=true;return;} e.textContent=msg; e.hidden=false; e.scrollIntoView({behavior:"smooth",block:"center"}); }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 
-/* ---------- Google Form fetch & parse ---------- */
-// Kendi proxy'niz (README'de Google Apps Script örneği var) iki yolla tanımlanabilir:
-// 1) Öğrencilere verdiğiniz linke parametre olarak: .../?proxy=https://script.google.com/macros/s/.../exec?url=
-// 2) Ya da aşağıdaki sabite doğrudan yazarak.
-const CUSTOM_PROXY_BASE = (function(){
-  let p = (new URLSearchParams(location.search).get("proxy") || "").trim();
-  return p.replace(/[?&]url=$/,"");
-})();
+/* ====== form okuma ====== */
 const PROXIES = [
-  { name:"allorigins-raw", ok:()=>true, make:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u), read:async r=>r.text() },
-  { name:"allorigins-get", ok:()=>true, make:u=>"https://api.allorigins.win/get?url="+encodeURIComponent(u), read:async r=>{const j=await r.json(); return j.contents||"";} },
-  { name:"codetabs",   ok:()=>true, make:u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u), read:async r=>r.text() },
-  { name:"corsproxy",  ok:()=>true, make:u=>"https://corsproxy.io/?url="+encodeURIComponent(u), read:async r=>r.text() }
+  { name:"allorigins-raw", make:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u), read:async r=>r.text() },
+  { name:"allorigins-get", make:u=>"https://api.allorigins.win/get?url="+encodeURIComponent(u), read:async r=>{const j=await r.json(); return j.contents||"";} },
+  { name:"codetabs", make:u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u), read:async r=>r.text() },
+  { name:"corsproxy", make:u=>"https://corsproxy.io/?url="+encodeURIComponent(u), read:async r=>r.text() }
 ];
 function normalizeFormUrl(raw){
   let u = raw.trim();
-  if(!/^https?:\/\//i.test(u)) return null;
+  if(!/^https?:\/\//i.test(u)) u = "https://" + u;
   try{ new URL(u); }catch(_){ return null; }
-  if(/forms\.gle\//.test(u)) return u;
+  if(/forms\.gle\//.test(u)) return u.split("?")[0];
   if(/docs\.google\.com\/forms\//.test(u)){
     u = u.split("?")[0].replace(/\/formResponse$/,"/viewform");
     if(!/\/viewform$/.test(u)) u = u.replace(/\/$/,"") + "/viewform";
@@ -214,13 +187,11 @@ function jsonpFetch(base, url, timeoutMs){
 }
 async function fetchViaProxies(url){
   const fails = [];
-  // 1) Araştırmacının kendi proxy'si: önce JSONP (CORS'a takılmaz), sonra fetch
   if(CUSTOM_PROXY_BASE){
     try{
       const t = await jsonpFetch(CUSTOM_PROXY_BASE, url, 20000);
       if(t && t.includes("FB_PUBLIC_LOAD_DATA_")) return t;
-      if(t === "invalid url") fails.push("custom: proxy linki reddetti (form adresi hatalı)");
-      else fails.push("custom-jsonp: form verisi yok — Apps Script kodunun güncel (callback destekli) sürüm olduğundan ve dağıtımın 'Anyone' olduğundan emin olun");
+      fails.push("custom-jsonp: form verisi yok");
     }catch(e){ fails.push("custom-jsonp: "+e.message); }
     try{
       const ctrl = new AbortController(); const tid = setTimeout(()=>ctrl.abort(), 14000);
@@ -230,9 +201,7 @@ async function fetchViaProxies(url){
       else fails.push("custom-fetch: HTTP "+r.status);
     }catch(e){ fails.push("custom-fetch: "+(e.name==="AbortError"?"zaman aşımı":(e.message||"ağ hatası"))); }
   }
-  // 2) Genel proxy yedekleri
   for(const p of PROXIES){
-    if(!p.ok()) continue;
     const ctrl = new AbortController();
     const tid = setTimeout(()=>ctrl.abort(), 14000);
     try{
@@ -247,14 +216,16 @@ async function fetchViaProxies(url){
       fails.push(p.name+": "+(e.name==="AbortError"?"zaman aşımı":(e.message||"ağ hatası")));
     }
   }
-  throw new Error("Ara sunucuların hiçbirinden ulaşılamadı ("+fails.join(" · ")+"). Birkaç saniye sonra tekrar deneyin; sorun sürerse farklı bir ağ/tarayıcı deneyin veya reklam engelleyiciyi bu sayfa için kapatın.");
+  const err = new Error("Ankete şu anda ulaşılamadı. Birkaç saniye sonra tekrar dene; olmazsa farklı bir ağ (ör. mobil veri) dene.");
+  err.detail = fails.join(" · ");
+  throw err;
 }
 function parseForm(html){
   const m = html.match(/FB_PUBLIC_LOAD_DATA_\s*=\s*(\[[\s\S]*?\]);\s*<\/script>/);
-  if(!m) throw new Error("Form yapısı çözümlenemedi.");
+  if(!m) throw new Error("Anket çözümlenemedi.");
   const data = JSON.parse(m[1]);
   const body = data[1];
-  const title = (data[3] || (body && body[8]) || "Adsız form");
+  const title = (data[3] || (body && body[8]) || "Anket");
   const items = (body && body[1]) || [];
   const qs = []; let pageBreaks = 0;
   for(const it of items){
@@ -265,12 +236,12 @@ function parseForm(html){
     const widgets = it[4]; if(!Array.isArray(widgets)) continue;
     if(type === 7){
       for(const w of widgets){
-        qs.push({entryId:String(w[0]), itemId:it[0], title:it[1]+" — "+((w[3]&&w[3][0])||""), type:7,
+        qs.push({entryId:String(w[0]), title:it[1]+" — "+((w[3]&&w[3][0])||""), type:7,
                  options:(w[1]||[]).map(o=>String(o[0])), required:!!w[2]});
       }
     } else {
       const w = widgets[0];
-      qs.push({entryId:String(w[0]), itemId:it[0], title:String(it[1]||""), type,
+      qs.push({entryId:String(w[0]), title:String(it[1]||""), type,
                options:(w[1]||[]).map(o=>String(o[0])), required:!!w[2]});
     }
   }
@@ -281,56 +252,7 @@ function parseForm(html){
 }
 const TYPENAME = {0:"kısa yanıt",1:"paragraf",2:"çoktan seçmeli",3:"açılır liste",4:"onay kutuları",5:"derecelendirme",7:"tablo satırı"};
 
-async function fetchForm(){
-  err("e2"); document.getElementById("ok2").hidden=true;
-  document.getElementById("genCard").hidden=true;
-  const url = normalizeFormUrl(document.getElementById("flink").value);
-  if(!url){ err("e2","Geçerli bir Google Forms linki girin (forms.gle/… veya docs.google.com/forms/…)."); return; }
-  const btn=document.getElementById("btnFetch");
-  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Getiriliyor…';
-  try{
-    const html = await fetchViaProxies(url);
-    const parsed = parseForm(html);
-    if(!parsed.questions.length) throw new Error("Formda desteklenen soru bulunamadı.");
-    const idm = html.match(/\/forms\/d\/e\/([\w-]+)\//);
-    S.formId = idm ? idm[1] : (url.match(/\/d\/e\/([\w-]+)\//)||[])[1];
-    if(!S.formId) throw new Error("Form kimliği belirlenemedi.");
-    S.formUrl=url; S.formTitle=parsed.title; S.questions=parsed.questions; S.pages=parsed.pages;
-    S.answers=null; S.attempts=0;
-    document.getElementById("answers").innerHTML="";
-    document.getElementById("btnSend").hidden=true;
-    document.getElementById("btnGen").textContent="Yanıtları üret";
-    const ok=document.getElementById("ok2");
-    ok.textContent = "Anket bulundu: \"" + parsed.title + "\" — " + parsed.questions.length + " soru.";
-    ok.hidden=false;
-    renderQuestions("qprev", parsed.questions, null);
-    document.getElementById("genCard").hidden=false;
-    document.getElementById("genCard").scrollIntoView({behavior:"smooth",block:"start"});
-  }catch(e){
-    err("e2","Anket getirilemedi: " + e.message + " Formun herkese açık olduğundan (oturum açma zorunluluğu kapalı) emin olun ve tekrar deneyin.");
-  }finally{
-    btn.disabled=false; btn.textContent="Anketi getir";
-  }
-}
-function renderQuestions(elId, qs, answers){
-  const el = document.getElementById(elId);
-  let h = '<div class="qlist">';
-  for(const q of qs){
-    h += '<div class="qi"><div class="qt">'+esc(q.title)+(q.required?' <span class="badge">zorunlu</span>':'')+'<span class="badge">'+TYPENAME[q.type]+'</span></div>';
-    if(!answers) h += '<div class="qm">'+(q.options.length?esc(q.options.join(" | ")):'serbest metin')+'</div>';
-    if(answers && answers[q.entryId]!==undefined){
-      const a = answers[q.entryId];
-      h += '<div class="qa">'+esc(Array.isArray(a)?a.join(", "):String(a))+'</div>';
-    } else if(q.autofill==="anon" && !answers){
-      h += '<div class="qa">Bu alana anonim kodunuz yazılacak</div>';
-    }
-    h += '</div>';
-  }
-  h += '</div>';
-  el.innerHTML = h;
-}
-
-/* ---------- prompt + LLM ---------- */
+/* ====== LLM ====== */
 function buildPrompt(){
   const lines = [];
   lines.push("Bir Türk devlet üniversitesinde okuyan tipik bir lisans öğrencisi gibi davran ve aşağıdaki anketi bu öğrencinin vereceği yanıtlarla doldur.");
@@ -351,7 +273,7 @@ function buildPrompt(){
   lines.push("1) YALNIZCA geçerli bir JSON nesnesi döndür; başka hiçbir metin, açıklama veya kod bloğu işareti ekleme.");
   lines.push('2) Biçim: {"answers": {"<soru kimliği>": <yanıt>}} — her soru kimliği için bir yanıt.');
   lines.push('3) Seçenekli sorularda yanıt, verilen SEÇENEK metinlerinden birinin TAM ve AYNEN kopyası olmalı. Onay kutularında yanıt bir dizi olmalı: ["Seçenek 1","Seçenek 2"].');
-  lines.push("4) Kısa yanıt ve paragraf sorularında, sorunun dilinde (soru İngilizce ise İngilizce, Türkçe ise Türkçe) öğrencinin yazacağı biçimde 1–3 cümlelik doğal bir metin yaz.");
+  lines.push("4) Kısa yanıt ve paragraf sorularında, sorunun dilinde, öğrencinin yazacağı biçimde 1–3 cümlelik doğal bir metin yaz.");
   lines.push("5) Zorunlu soruları asla boş bırakma.");
   return lines.join("\n");
 }
@@ -362,7 +284,7 @@ async function callOnce(provider, model, prompt, key){
       body: JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.8,responseMimeType:"application/json"}})
     });
     const j = await r.json();
-    if(!r.ok){ const e=new Error(j.error?.message||("Gemini isteği başarısız ("+r.status+")")); e.http=r.status; throw e; }
+    if(!r.ok){ const e=new Error(j.error?.message||("İstek başarısız ("+r.status+")")); e.http=r.status; throw e; }
     const t = j.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("") || "";
     if(!t) throw new Error("Model boş yanıt döndürdü.");
     return t;
@@ -373,7 +295,7 @@ async function callOnce(provider, model, prompt, key){
       body: JSON.stringify({model, temperature:0.8, response_format:{type:"json_object"}, messages:[{role:"user",content:prompt}]})
     });
     const j = await r.json();
-    if(!r.ok){ const e=new Error(j.error?.message||("OpenAI isteği başarısız ("+r.status+")")); e.http=r.status; throw e; }
+    if(!r.ok){ const e=new Error(j.error?.message||("İstek başarısız ("+r.status+")")); e.http=r.status; throw e; }
     return j.choices?.[0]?.message?.content || "";
   }
   const r = await fetch("https://api.anthropic.com/v1/messages",{
@@ -382,7 +304,7 @@ async function callOnce(provider, model, prompt, key){
     body: JSON.stringify({model, max_tokens:4000, temperature:0.8, messages:[{role:"user",content:prompt}]})
   });
   const j = await r.json();
-  if(!r.ok){ const e=new Error(j.error?.message||("Anthropic isteği başarısız ("+r.status+")")); e.http=r.status; throw e; }
+  if(!r.ok){ const e=new Error(j.error?.message||("İstek başarısız ("+r.status+")")); e.http=r.status; throw e; }
   return (j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
 }
 function isModelNotFound(e){
@@ -394,7 +316,7 @@ function isAuthError(e){
 }
 async function callLLM(prompt, key){
   const provider = S.provider || whichProvider(key);
-  if(!provider) throw new Error("Yapay zekâ sağlayıcısı belirlenemedi — 1. bölümde anahtarınızın altındaki düğmelerden hangi yapay zekâyı kullandığınızı seçin.");
+  if(!provider) throw new Error("Hangi yapay zekâyı kullandığını seç (anahtarın altındaki düğmeler).");
   S.provider = provider;
   let lastErr = null;
   for(const model of MODEL_CHAIN[provider]){
@@ -403,7 +325,7 @@ async function callLLM(prompt, key){
       S.model = model;
       return out;
     }catch(e){
-      if(isAuthError(e)) throw new Error("API anahtarı doğrulanamadı: " + e.message + " — anahtarı kontrol edip yeniden yapıştırın.");
+      if(isAuthError(e)) throw new Error("API anahtarı doğrulanamadı — anahtarı kontrol edip yeniden yapıştır.");
       lastErr = e;
       if(!isModelNotFound(e)) throw e;
     }
@@ -413,7 +335,7 @@ async function callLLM(prompt, key){
 function extractJSON(text){
   let t = text.trim().replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
   const a=t.indexOf("{"), b=t.lastIndexOf("}");
-  if(a===-1||b===-1) throw new Error("Model yanıtında JSON bulunamadı.");
+  if(a===-1||b===-1) throw new Error("Model yanıtı çözümlenemedi.");
   return JSON.parse(t.slice(a,b+1));
 }
 function bestOption(val, options){
@@ -429,7 +351,7 @@ function validateAnswers(raw){
   const anon = document.getElementById("anon").value.trim();
   const out = {}; const missing = [];
   for(const q of S.questions){
-    if(q.autofill==="anon"){ if(anon) out[q.entryId]=anon; else if(q.required) missing.push(q.title+" (anonim kod alanını doldurun)"); continue; }
+    if(q.autofill==="anon"){ if(anon) out[q.entryId]=anon; else if(q.required) missing.push("Anonim kod alanını doldur"); continue; }
     let val = src[q.entryId];
     if(val===undefined) val = src["SORU["+q.entryId+"]"];
     if(val===undefined||val===null||val===""){ if(q.required) missing.push(q.title); continue; }
@@ -445,36 +367,71 @@ function validateAnswers(raw){
   }
   return {out, missing};
 }
-async function generate(){
-  err("e4"); err("e5");
+
+/* ====== ana akış: getir + üret tek dokunuş ====== */
+async function prepare(regen){
+  showErr();
+  const btn = regen ? document.getElementById("btnRetry") : document.getElementById("btnGo");
   const key = cleanKey(document.getElementById("akey").value);
-  if(!key){ err("e4","Lütfen 1. bölümde API anahtarınızı girin."); return; }
-  const btn=document.getElementById("btnGen");
-  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Yapay zekâ yanıtlıyor…';
+  if(!key){ showErr("API anahtarını yapıştır."); return; }
+  if(!S.provider && !whichProvider(key)){ showErr("Hangi yapay zekâyı kullandığını seç (anahtarın altındaki düğmeler)."); detectProvider(); return; }
+  const url = normalizeFormUrl(document.getElementById("flink").value);
+  if(!url){ showErr("Geçerli bir anket linki yapıştır (forms.gle/… olmalı)."); return; }
+
+  const setB=(t,spin)=>{ btn.disabled=true; btn.innerHTML=(spin?'<span class="spin"></span>':'')+t; };
+  const allBtns=[document.getElementById("btnGo"),document.getElementById("btnSend"),document.getElementById("btnRetry")];
+  allBtns.forEach(b=>b.disabled=true);
   try{
+    // 1) formu getir (yalnızca ilk seferde veya link değiştiyse)
+    if(!S.questions.length || S.formUrl!==url){
+      setB("Anket açılıyor…", true);
+      const html = await fetchViaProxies(url);
+      const parsed = parseForm(html);
+      if(!parsed.questions.length) throw new Error("Ankette desteklenen soru bulunamadı.");
+      const idm = html.match(/\/forms\/d\/e\/([\w-]+)\//);
+      S.formId = idm ? idm[1] : "";
+      if(!S.formId) throw new Error("Anket kimliği belirlenemedi.");
+      S.formUrl=url; S.formTitle=parsed.title; S.questions=parsed.questions; S.pages=parsed.pages;
+      S.answers=null; S.attempts=0;
+    }
+    // 2) yanıtları üret
+    setB("Yapay zekâ yanıtlıyor…", true);
     const prompt = buildPrompt();
     const rawText = await callLLM(prompt, key);
-    const parsed = extractJSON(rawText);
-    const {out, missing} = validateAnswers(parsed);
-    if(missing.length) throw new Error("Şu zorunlu sorular geçerli biçimde yanıtlanmadı: " + missing.slice(0,3).join("; ") + (missing.length>3?" …":"") + " — lütfen yeniden üretin.");
-    S.attempts++;
-    S.answers = out;
+    const parsedA = extractJSON(rawText);
+    const {out, missing} = validateAnswers(parsedA);
+    if(missing.length) throw new Error("Bazı zorunlu sorular yanıtlanamadı: " + missing.slice(0,2).join("; ") + (missing.length>2?" …":"") + " — tekrar dene.");
+    S.attempts++; S.answers = out;
     S.log.push({attempt:S.attempts, timestamp:new Date().toISOString(), provider:S.provider, model:S.model, temperature:0.8, prompt, raw:rawText});
-    renderQuestions("answers", S.questions, out);
-    document.getElementById("btnSend").hidden=false;
-    document.getElementById("btnSend").scrollIntoView({behavior:"smooth",block:"center"});
+    // 3) önizleme
+    document.getElementById("okline").textContent = "\"" + S.formTitle + "\" yanıtlandı. Kontrol et, uygunsa gönder:";
+    renderAnswers();
+    document.getElementById("preview").hidden=false;
+    document.getElementById("btnGo").hidden=true;
+    document.getElementById("preview").scrollIntoView({behavior:"smooth",block:"start"});
   }catch(e){
-    err("e4", e.message);
+    showErr(e.message + (e.detail ? "  [Ayrıntı: " + e.detail + "]" : ""));
+    if(!S.answers){ document.getElementById("preview").hidden=true; document.getElementById("btnGo").hidden=false; }
   }finally{
-    btn.disabled=false;
-    btn.textContent = S.attempts ? "Yeniden üret (deneme "+(S.attempts+1)+")" : "Yanıtları üret";
+    allBtns.forEach(b=>b.disabled=false);
+    document.getElementById("btnGo").textContent="Yapay zekâ yanıtlasın";
+    document.getElementById("btnRetry").textContent="Beğenmedim, yeniden yanıtla";
+    document.getElementById("btnSend").textContent="Yanıtları gönder";
   }
 }
-
-/* ---------- submit ---------- */
+function renderAnswers(){
+  const el = document.getElementById("answers");
+  let h = "";
+  for(const q of S.questions){
+    const a = S.answers[q.entryId];
+    if(a===undefined) continue;
+    h += '<div class="ai"><div class="aq">'+esc(q.title)+'</div><div class="aa">'+esc(Array.isArray(a)?a.join(", "):String(a))+'</div></div>';
+  }
+  el.innerHTML = h;
+}
 function submitForm(){
-  err("e5");
-  if(!S.answers){ err("e5","Önce yanıtları üretin."); return; }
+  showErr();
+  if(!S.answers){ showErr("Önce yanıtları üret."); return; }
   const btn=document.getElementById("btnSend");
   btn.disabled=true; btn.innerHTML='<span class="spin"></span>Gönderiliyor…';
   try{
@@ -493,18 +450,18 @@ function submitForm(){
     document.body.appendChild(f);
     f.submit();
     setTimeout(()=>{ f.remove();
+      document.getElementById("mainCard").hidden=true;
       document.getElementById("doneCard").hidden=false;
-      document.getElementById("doneCard").scrollIntoView({behavior:"smooth"});
-      btn.disabled=true; btn.textContent="Gönderildi";
+      window.scrollTo({top:0,behavior:"smooth"});
     }, 1600);
   }catch(e){
-    err("e5","Gönderim başarısız: "+e.message);
-    btn.disabled=false; btn.textContent="Yanıtları ankete gönder";
+    showErr("Gönderilemedi: "+e.message);
+    btn.disabled=false; btn.textContent="Yanıtları gönder";
   }
 }
 function downloadLog(){
   const payload = {
-    tool:"synthetic-student-response-tool v2",
+    tool:"synthetic-student-response-tool v8",
     anon_code: document.getElementById("anon").value.trim() || null,
     form:{id:S.formId, title:S.formTitle, url:S.formUrl, pages:S.pages,
       questions:S.questions.map(q=>({entryId:q.entryId,title:q.title,type:q.type,options:q.options,required:q.required,autofill:q.autofill||null}))},
@@ -513,7 +470,7 @@ function downloadLog(){
   const blob = new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download="llm_yanit_kaydi_"+Date.now()+".json";
+  a.download="yanit_kaydi_"+Date.now()+".json";
   a.click(); URL.revokeObjectURL(a.href);
 }
 </script>
