@@ -52,3 +52,27 @@ Sentetik formda ayarlar:
 - [ ] Test profiliyle uçtan uca deneme: form çözümleme → üretim → gönderim → Yanıtlar sekmesinde kayıt
 - [ ] Grid/ölçek maddeleri doğru eşleşiyor
 - [ ] JSON üretim kaydı iniyor ve okunuyor
+
+---
+
+## 6. Kalıcı Çözüm: Kendi Proxy'niz (Google Apps Script — 3 dakika, ücretsiz)
+
+Genel proxy'ler (allorigins, codetabs, corsproxy) zaman zaman yavaşlar veya erişilemez olur. En güvenilir yol, formu Google'ın kendi altyapısı üzerinden okuyan küçük bir Apps Script kurmaktır:
+
+1. **script.google.com** → New project
+2. Editöre şunu yapıştırın:
+```javascript
+function doGet(e) {
+  var url = e.parameter.url;
+  if (!url || url.indexOf("https://docs.google.com/forms/") !== 0 && url.indexOf("https://forms.gle/") !== 0) {
+    return ContentService.createTextOutput("invalid url");
+  }
+  var html = UrlFetchApp.fetch(url, {followRedirects: true, muteHttpExceptions: true}).getContentText();
+  return ContentService.createTextOutput(html).setMimeType(ContentService.MimeType.TEXT);
+}
+```
+3. **Deploy → New deployment → Web app** → Execute as: *Me* · Who has access: **Anyone** → Deploy
+4. Çıkan `https://script.google.com/macros/s/…/exec` adresini kopyalayın
+5. `index.html` içinde en üstteki `const CUSTOM_PROXY = "";` satırını şöyle doldurun:
+   `const CUSTOM_PROXY = "https://script.google.com/macros/s/…/exec?url=";`
+6. Değişikliği depoya kaydedin — araç artık önce sizin proxy'nizi kullanır, genel proxy'ler yedekte kalır.
