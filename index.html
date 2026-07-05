@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sentetik Öğrenci Yanıtı Üretim Aracı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16324F; --slate:#33465A; --mist:#6B7C8E;
+  --paper:#F7F9FB; --card:#FFFFFF; --line:#DCE4EC;
+  --teal:#0E7C7B; --teal-dk:#0A5E5D; --teal-soft:#E4F2F1;
+  --warn-bg:#FDF6E7; --warn-bd:#E7CE95; --warn-tx:#7A5A12;
+  --err-bg:#FBEDED; --err-tx:#8C2B2B;
+  --ok-bg:#EAF6EE; --ok-tx:#1E6B3A;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--paper);color:var(--slate);font-size:15.5px;line-height:1.55}
+.wrap{max-width:980px;margin:0 auto;padding:28px 18px 80px}
+header{margin-bottom:26px}
+.kicker{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;color:var(--teal);text-transform:uppercase;margin-bottom:8px}
+h1{font-family:'Sora',sans-serif;font-size:clamp(22px,4vw,30px);color:var(--ink);line-height:1.2;font-weight:700}
+.sub{color:var(--mist);margin-top:8px;max-width:640px}
+.layout{display:grid;grid-template-columns:200px 1fr;gap:28px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}}
+/* step rail */
+.rail{position:sticky;top:24px;align-self:start}
+@media(max-width:760px){.rail{position:static;display:flex;flex-wrap:wrap;gap:8px}}
+.step{display:flex;gap:12px;padding:10px 0;position:relative;color:var(--mist)}
+@media(min-width:761px){.step:not(:last-child)::after{content:"";position:absolute;left:15px;top:40px;bottom:-6px;width:2px;background:var(--line)}}
+@media(max-width:760px){.step{padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:var(--card)}.step .lbl{display:none}}
+.step .code{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;flex:none;z-index:1}
+.step .lbl{font-size:13.5px;padding-top:6px}
+.step.on{color:var(--ink)}
+.step.on .code{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+.step.done .code{background:var(--teal);border-color:var(--teal);color:#fff}
+.step.done .code::before{content:"✓"}
+.step.done .code span{display:none}
+/* cards */
+.panel{display:none}
+.panel.on{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px;margin-bottom:16px}
+h2{font-family:'Sora',sans-serif;font-size:18px;color:var(--ink);margin-bottom:6px}
+.hint{font-size:13.5px;color:var(--mist);margin-bottom:18px}
+label{display:block;font-size:13.5px;font-weight:600;color:var(--ink);margin:14px 0 5px}
+label small{font-weight:400;color:var(--mist)}
+input[type=text],input[type=password],select,textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font:inherit;color:var(--slate);background:#fff}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:var(--teal)}
+textarea{min-height:110px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+@media(max-width:560px){.grid2{grid-template-columns:1fr}}
+.note{border-radius:8px;padding:12px 14px;font-size:13.5px;margin:14px 0}
+.note.warn{background:var(--warn-bg);border:1px solid var(--warn-bd);color:var(--warn-tx)}
+.note.err{background:var(--err-bg);color:var(--err-tx);border:1px solid #E7B9B9}
+.note.ok{background:var(--ok-bg);color:var(--ok-tx);border:1px solid #BBDEC7}
+.note.info{background:var(--teal-soft);color:var(--teal-dk);border:1px solid #BFE0DF}
+.btnrow{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+button{font:inherit;font-weight:600;border:none;border-radius:8px;padding:11px 20px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.primary{background:var(--teal);color:#fff}
+.primary:hover{background:var(--teal-dk)}
+.primary:disabled{background:#9DBFBE;cursor:not-allowed}
+.ghost{background:transparent;color:var(--slate);border:1.5px solid var(--line)}
+.ghost:hover{border-color:var(--mist)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* parsed questions / answers */
+.qlist{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:10px}
+.qi{padding:12px 14px;border-bottom:1px solid var(--line);background:#fff}
+.qi:last-child{border-bottom:none}
+.qi .qt{font-size:14px;color:var(--ink);font-weight:500}
+.qi .qm{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--mist);margin-top:3px}
+.qi .qa{margin-top:6px;font-size:14px;color:var(--teal-dk);background:var(--teal-soft);border-radius:6px;padding:7px 10px;white-space:pre-wrap}
+.badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--mist);margin-left:6px}
+.meta{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--mist)}
+.done-big{text-align:center;padding:36px 20px}
+.done-big .mark{width:64px;height:64px;border-radius:50%;background:var(--teal);color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+footer{margin-top:40px;font-size:12.5px;color:var(--mist);text-align:center}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">Sentetik Öğrenci Sesi Araştırması · Veri Toplama Aracı</div>
+  <h1>Yapay zekânız, sizin profilinizle anketi yanıtlasın</h1>
+  <p class="sub">Bu araç, araştırmacının size gönderdiği Google Forms anketini, <strong>sizin kullandığınız yapay zekâ modeline</strong> (ör. Gemini) profilinize dayanarak doldurtur ve üretilen yanıtları <strong>sentetik yanıt formuna</strong> gönderir. API anahtarınız yalnızca tarayıcınızda kalır; hiçbir sunucuya kaydedilmez.</p>
+</header>
+
+<div class="layout">
+  <nav class="rail" aria-label="Adımlar">
+    <div class="step on" data-s="1"><div class="code"><span>P1</span></div><div class="lbl">Kod ve profil</div></div>
+    <div class="step" data-s="2"><div class="code"><span>P2</span></div><div class="lbl">Anket linki</div></div>
+    <div class="step" data-s="3"><div class="code"><span>P3</span></div><div class="lbl">Yapay zekâ erişimi</div></div>
+    <div class="step" data-s="4"><div class="code"><span>P4</span></div><div class="lbl">Yanıt üretimi</div></div>
+    <div class="step" data-s="5"><div class="code"><span>P5</span></div><div class="lbl">Gönderim</div></div>
+  </nav>
+
+  <main>
+    <!-- P1 -->
+    <section class="panel on" id="p1">
+      <div class="card">
+        <h2>P1 · Anonim kodunuz ve kısa profiliniz</h2>
+        <p class="hint">Bu bilgiler, yapay zekânın "sizin profilinizdeki bir öğrenci gibi" yanıt üretmesi için kullanılır. Kimlik bilgisi girmeyiniz.</p>
+        <label for="anon">Anonim kodunuz <small>(1. oturumdaki ankette kullandığınız kodun aynısı)</small></label>
+        <input type="text" id="anon" autocomplete="off" placeholder="ör. AY0342">
+        <div class="grid2">
+          <div><label for="pf1">Sınıf düzeyi</label>
+            <select id="pf1"><option value="">Seçiniz</option><option>1. sınıf</option><option>2. sınıf</option><option>3. sınıf</option><option>4. sınıf</option><option>Lisansüstü</option></select></div>
+          <div><label for="pf2">Bölüm / program</label><input type="text" id="pf2" placeholder="ör. Almanca Öğretmenliği"></div>
+          <div><label for="pf3">Yapay zekâ kullanım sıklığı</label>
+            <select id="pf3"><option value="">Seçiniz</option><option>Hiç</option><option>Ayda birkaç kez</option><option>Haftada birkaç kez</option><option>Hemen her gün</option><option>Günde birçok kez</option></select></div>
+          <div><label for="pf4">En sık kullandığınız araç</label>
+            <select id="pf4"><option value="">Seçiniz</option><option>ChatGPT</option><option>Gemini</option><option>Claude</option><option>DeepL / çeviri araçları</option><option>Diğer</option></select></div>
+          <div><label for="pf5">Akademik başarı algınız</label>
+            <select id="pf5"><option value="">Seçiniz</option><option>Düşük</option><option>Ortanın altı</option><option>Orta</option><option>Ortanın üstü</option><option>Yüksek</option></select></div>
+          <div><label for="pf6">Teknolojiye yakınlığınız</label>
+            <select id="pf6"><option value="">Seçiniz</option><option>Çok düşük</option><option>Düşük</option><option>Orta</option><option>Yüksek</option><option>Çok yüksek</option></select></div>
+        </div>
+        <label for="pf7">Kendinizi tanıtan kısa metin <small>(1. oturumdaki A10 maddesine yazdığınız metnin aynısı; 4–5 cümle)</small></label>
+        <textarea id="pf7" placeholder="Öğrenme alışkanlıklarınız, yapay zekâya yaklaşımınız ve derslerdeki genel tutumunuz…"></textarea>
+        <div id="e1" class="note err" hidden></div>
+        <div class="btnrow"><button class="primary" onclick="goP2()">Devam et</button></div>
+      </div>
+    </section>
+
+    <!-- P2 -->
+    <section class="panel" id="p2">
+      <div class="card">
+        <h2>P2 · Sentetik yanıt formunun linkini yapıştırın</h2>
+        <p class="hint">Araştırmacının size <strong>bu araçta kullanmanız için</strong> gönderdiği Google Forms linkini yapıştırın. (Kendi doldurduğunuz ankete değil, sentetik yanıtlar için açılan forma aittir.)</p>
+        <label for="flink">Google Forms linki</label>
+        <input type="text" id="flink" autocomplete="off" placeholder="https://docs.google.com/forms/d/e/…/viewform">
+        <div id="e2" class="note err" hidden></div>
+        <div id="ok2" class="note ok" hidden></div>
+        <div id="qprev"></div>
+        <div class="btnrow">
+          <button class="ghost" onclick="show(1)">Geri</button>
+          <button class="primary" id="btnFetch" onclick="fetchForm()">Anketi getir ve çözümle</button>
+          <button class="primary" id="btnTo3" onclick="show(3)" hidden>Devam et</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- P3 -->
+    <section class="panel" id="p3">
+      <div class="card">
+        <h2>P3 · Kendi yapay zekânıza erişim</h2>
+        <p class="hint">Kullandığınız yapay zekânın API anahtarını girin. Anahtar yalnızca tarayıcınızdan doğrudan sağlayıcıya (Google/OpenAI/Anthropic) gönderilir; bu sayfada saklanmaz, araştırmacıya iletilmez.</p>
+        <label for="prov">Sağlayıcı</label>
+        <select id="prov" onchange="provChanged()">
+          <option value="gemini" selected>Google Gemini (önerilen)</option>
+          <option value="openai">OpenAI (ChatGPT)</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+        </select>
+        <label for="model">Model</label>
+        <select id="model"></select>
+        <label for="akey">API anahtarı</label>
+        <input type="password" id="akey" autocomplete="off" placeholder="API anahtarınızı yapıştırın">
+        <div class="note info" id="keyhelp"></div>
+        <div id="e3" class="note err" hidden></div>
+        <div class="btnrow">
+          <button class="ghost" onclick="show(2)">Geri</button>
+          <button class="primary" onclick="goP4()">Devam et</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- P4 -->
+    <section class="panel" id="p4">
+      <div class="card">
+        <h2>P4 · Yapay zekâ yanıtlarını üretin</h2>
+        <p class="hint">Yapay zekâ, profilinize dayanarak anketi <em>sizin gibi bir öğrenci</em> olarak yanıtlayacak. Üretilen yanıtlar aşağıda görüntülenecek; yanıtları düzenleyemezsiniz, ancak yeniden üretebilirsiniz (deneme sayısı kayda geçer).</p>
+        <div id="e4" class="note err" hidden></div>
+        <div class="btnrow" style="margin-top:0">
+          <button class="primary" id="btnGen" onclick="generate()">Yanıtları üret</button>
+        </div>
+        <div id="answers"></div>
+        <div class="btnrow">
+          <button class="ghost" onclick="show(3)">Geri</button>
+          <button class="primary" id="btnTo5" onclick="show(5)" hidden>Gönderime geç</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- P5 -->
+    <section class="panel" id="p5">
+      <div class="card" id="submitCard">
+        <h2>P5 · Yanıtları gönderin</h2>
+        <p class="hint">Aşağıdaki düğmeye bastığınızda, yapay zekânın ürettiği yanıtlar sentetik yanıt formuna gönderilir. Bu yanıtlar araştırmada <strong>sizin yanıtlarınız olarak değil</strong>, ayrı bir sentetik veri seti olarak değerlendirilir.</p>
+        <div class="note warn">Gönderimden önce yanıtların üretilmiş olduğundan emin olun. Gönderim geri alınamaz.</div>
+        <div id="e5" class="note err" hidden></div>
+        <div class="btnrow">
+          <button class="ghost" onclick="show(4)">Geri</button>
+          <button class="primary" id="btnSend" onclick="submitForm()">Sentetik yanıtları gönder</button>
+        </div>
+      </div>
+      <div class="card done-big" id="doneCard" hidden>
+        <div class="mark">✓</div>
+        <h2>Gönderildi — teşekkür ederiz</h2>
+        <p class="hint" style="margin-top:8px">Yapay zekânızın ürettiği yanıtlar sentetik yanıt formuna iletildi. İsterseniz üretim kaydını (JSON) kendi bilgisayarınıza indirebilirsiniz.</p>
+        <div class="btnrow" style="justify-content:center">
+          <button class="ghost" onclick="downloadLog()">Üretim kaydını indir (JSON)</button>
+        </div>
+      </div>
+    </section>
+
+    <footer>Bu araç bir bilimsel araştırma kapsamında kullanılmaktadır. API anahtarınız ve profil bilgileriniz bu sayfa dışına yalnızca seçtiğiniz yapay zekâ sağlayıcısına ve (yanıtlar olarak) araştırma formuna gider. Sorularınız için araştırmacıya başvurunuz.</footer>
+  </main>
+</div>
+</div>
+
+<iframe name="gf_sink" id="gf_sink" style="display:none" title="gönderim"></iframe>
+
+<script>
+"use strict";
+/* ================= state ================= */
+const S = {
+  step: 1,
+  profile: {}, anon: "",
+  formUrl: "", formTitle: "", formId: "", pages: 1,
+  questions: [],        // {entryId, itemId, title, type, options, required, row, autofill}
+  answers: null,        // {entryId: value | [values]}
+  attempts: 0,
+  provider: "gemini", model: "", 
+  log: []
+};
+
+const MODELS = {
+  gemini:    ["gemini-2.5-flash","gemini-2.5-pro","gemini-2.0-flash"],
+  openai:    ["gpt-4o-mini","gpt-4o","gpt-4.1-mini"],
+  anthropic: ["claude-sonnet-4-6","claude-haiku-4-5-20251001"]
+};
+const KEYHELP = {
+  gemini: "Gemini API anahtarını Google AI Studio üzerinden (aistudio.google.com → \"Get API key\") ücretsiz alabilirsiniz.",
+  openai: "OpenAI API anahtarını platform.openai.com → API keys bölümünden alabilirsiniz (kullanım ücretlidir).",
+  anthropic: "Anthropic API anahtarını console.anthropic.com üzerinden alabilirsiniz (kullanım ücretlidir)."
+};
+
+/* ================= navigation ================= */
+function show(n){
+  S.step = n;
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("on"));
+  document.getElementById("p"+n).classList.add("on");
+  document.querySelectorAll(".step").forEach(el=>{
+    const k = +el.dataset.s;
+    el.classList.toggle("on", k===n);
+    el.classList.toggle("done", k<n);
+  });
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+function err(id,msg){const e=document.getElementById(id); if(!msg){e.hidden=true;return;} e.textContent=msg; e.hidden=false;}
+
+function goP2(){
+  const anon=document.getElementById("anon").value.trim();
+  const p={
+    sinif:v("pf1"), bolum:v("pf2"), siklik:v("pf3"), arac:v("pf4"),
+    basari:v("pf5"), teknoloji:v("pf6"), metin:v("pf7")
+  };
+  if(!anon){err("e1","Lütfen anonim kodunuzu girin.");return;}
+  if(!p.sinif||!p.siklik||!p.metin||p.metin.length<40){err("e1","Lütfen en az sınıf düzeyi, kullanım sıklığı alanlarını doldurun ve kendinizi tanıtan metni (en az birkaç cümle) yazın.");return;}
+  err("e1"); S.anon=anon; S.profile=p; show(2);
+}
+function v(id){return document.getElementById(id).value.trim();}
+
+/* ================= P2: fetch & parse Google Form ================= */
+const PROXIES = [
+  u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+  u => "https://corsproxy.io/?url=" + encodeURIComponent(u)
+];
+
+function normalizeFormUrl(raw){
+  let u = raw.trim();
+  if(!/^https?:\/\//i.test(u)) return null;
+  try{ new URL(u); }catch(_){ return null; }
+  if(/forms\.gle\//.test(u)) return u;                       // shortened; proxy follows redirect
+  if(/docs\.google\.com\/forms\//.test(u)){
+    u = u.split("?")[0].replace(/\/formResponse$/,"/viewform");
+    if(!/\/viewform$/.test(u)) u = u.replace(/\/$/,"") + "/viewform";
+    return u;
+  }
+  return null;
+}
+
+async function fetchViaProxies(url){
+  let lastErr = null;
+  for(const p of PROXIES){
+    try{
+      const r = await fetch(p(url), {cache:"no-store"});
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      const t = await r.text();
+      if(t && t.includes("FB_PUBLIC_LOAD_DATA_")) return t;
+      lastErr = new Error("Form verisi bulunamadı (oturum gerektiriyor olabilir).");
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error("Bağlantı kurulamadı.");
+}
+
+function parseForm(html){
+  const m = html.match(/FB_PUBLIC_LOAD_DATA_\s*=\s*(\[[\s\S]*?\]);\s*<\/script>/);
+  if(!m) throw new Error("Form yapısı çözümlenemedi.");
+  const data = JSON.parse(m[1]);
+  const body = data[1];
+  const title = (data[3] || (body && body[8]) || "Adsız form");
+  const items = (body && body[1]) || [];
+  const qs = []; let pageBreaks = 0;
+  for(const it of items){
+    if(!Array.isArray(it)) continue;
+    const type = it[3];
+    if(type === 8){ pageBreaks++; continue; }              // section/page break
+    if(![0,1,2,3,4,5,7].includes(type)) continue;          // unsupported: date/time/media/etc.
+    const widgets = it[4]; if(!Array.isArray(widgets)) continue;
+    if(type === 7){                                        // grid: one entry per row
+      for(const w of widgets){
+        qs.push({
+          entryId: String(w[0]), itemId: it[0],
+          title: it[1] + " — " + ((w[3]&&w[3][0])||""),
+          type: 7,
+          options: (w[1]||[]).map(o=>String(o[0])),
+          required: !!w[2]
+        });
+      }
+    } else {
+      const w = widgets[0];
+      qs.push({
+        entryId: String(w[0]), itemId: it[0],
+        title: String(it[1]||""),
+        type,
+        options: (w[1]||[]).map(o=>String(o[0])),
+        required: !!w[2]
+      });
+    }
+  }
+  // auto-fill: anonymous code question is answered deterministically, not by the LLM
+  for(const q of qs){
+    if((q.type===0||q.type===1) && /anonim|kod/i.test(q.title)){ q.autofill="anon"; break; }
+  }
+  return { title:String(title), questions: qs, pages: pageBreaks+1 };
+}
+
+async function fetchForm(){
+  err("e2"); document.getElementById("ok2").hidden=true;
+  document.getElementById("btnTo3").hidden=true;
+  const url = normalizeFormUrl(document.getElementById("flink").value);
+  if(!url){ err("e2","Geçerli bir Google Forms linki girin (docs.google.com/forms/… veya forms.gle/…)."); return; }
+  const btn=document.getElementById("btnFetch");
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Getiriliyor…';
+  try{
+    const html = await fetchViaProxies(url);
+    const parsed = parseForm(html);
+    if(!parsed.questions.length) throw new Error("Formda desteklenen soru bulunamadı.");
+    // resolve final form action id from html (handles forms.gle redirects)
+    const idm = html.match(/\/forms\/d\/e\/([\w-]+)\//);
+    S.formId = idm ? idm[1] : (url.match(/\/d\/e\/([\w-]+)\//)||[])[1];
+    if(!S.formId) throw new Error("Form kimliği belirlenemedi.");
+    S.formUrl = url; S.formTitle = parsed.title; S.questions = parsed.questions; S.pages = parsed.pages;
+    S.answers = null; document.getElementById("answers").innerHTML=""; document.getElementById("btnTo5").hidden=true;
+    const ok=document.getElementById("ok2");
+    ok.textContent = "Form çözümlendi: \"" + parsed.title + "\" — " + parsed.questions.length + " soru, " + parsed.pages + " sayfa.";
+    ok.hidden=false;
+    renderQuestions("qprev", parsed.questions, null);
+    document.getElementById("btnTo3").hidden=false;
+  }catch(e){
+    err("e2","Form getirilemedi: " + e.message + " Formun herkese açık olduğundan (oturum açma zorunluluğu kapalı) emin olun ve tekrar deneyin.");
+  }finally{
+    btn.disabled=false; btn.textContent="Anketi getir ve çözümle";
+  }
+}
+
+const TYPENAME = {0:"kısa yanıt",1:"paragraf",2:"çoktan seçmeli",3:"açılır liste",4:"onay kutuları",5:"derecelendirme",7:"tablo satırı"};
+function renderQuestions(elId, qs, answers){
+  const el = document.getElementById(elId);
+  let h = '<div class="qlist">';
+  for(const q of qs){
+    h += '<div class="qi"><div class="qt">'+esc(q.title)+(q.required?' <span class="badge">zorunlu</span>':'')+'<span class="badge">'+TYPENAME[q.type]+'</span></div>';
+    h += '<div class="qm">entry.'+q.entryId+(q.options.length?' · seçenekler: '+esc(q.options.join(" | ")):'')+'</div>';
+    if(answers && answers[q.entryId]!==undefined){
+      const a = answers[q.entryId];
+      h += '<div class="qa">'+esc(Array.isArray(a)?a.join(", "):String(a))+'</div>';
+    } else if(q.autofill==="anon"){
+      h += '<div class="qa">Otomatik doldurulacak: anonim kodunuz</div>';
+    }
+    h += '</div>';
+  }
+  h += '</div>';
+  el.innerHTML = h;
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+/* ================= P3: provider ================= */
+function provChanged(){
+  S.provider = document.getElementById("prov").value;
+  const sel = document.getElementById("model");
+  sel.innerHTML = MODELS[S.provider].map(m=>'<option>'+m+'</option>').join("");
+  document.getElementById("keyhelp").textContent = KEYHELP[S.provider];
+}
+function goP4(){
+  const key = document.getElementById("akey").value.trim();
+  if(!key){ err("e3","Lütfen API anahtarınızı girin."); return; }
+  err("e3"); S.model = document.getElementById("model").value; show(4);
+}
+
+/* ================= P4: prompt + LLM call ================= */
+function buildPrompt(){
+  const p = S.profile;
+  const lines = [];
+  lines.push("Aşağıda bir üniversite öğrencisinin kimlik bilgisi içermeyen profil bilgileri ve kendi yazdığı kısa tanıtım metni verilmiştir. Bu öğrenci gibi davranarak anketi doldur.");
+  lines.push("Yanıtların bu öğrencinin GERÇEKÇİ yanıtları olmalı; ideal veya örnek bir öğrenci gibi değil, bu profildeki gerçek bir öğrenci gibi yanıtla. Kararsızlık, tereddüt veya olumsuz görüş varsa bunları da yansıt.");
+  lines.push("");
+  lines.push("ÖĞRENCİ PROFİLİ:");
+  lines.push("- Sınıf düzeyi: " + p.sinif);
+  if(p.bolum) lines.push("- Bölüm: " + p.bolum);
+  lines.push("- Yapay zekâ kullanım sıklığı: " + p.siklik);
+  if(p.arac) lines.push("- En sık kullandığı araç: " + p.arac);
+  if(p.basari) lines.push("- Akademik başarı algısı: " + p.basari);
+  if(p.teknoloji) lines.push("- Teknolojiye yakınlık: " + p.teknoloji);
+  lines.push("- Kendini tanıtma metni: \"" + p.metin + "\"");
+  lines.push("");
+  lines.push("ANKET SORULARI (her sorunun bir kimliği vardır):");
+  for(const q of S.questions){
+    if(q.autofill) continue;
+    let d = "SORU[" + q.entryId + "] (" + TYPENAME[q.type] + (q.required?", zorunlu":"") + "): " + q.title;
+    if(q.options.length){
+      d += " — SEÇENEKLER: " + q.options.map(o=>'"'+o+'"').join(", ");
+      if(q.type===4) d += " (birden fazla seçilebilir)";
+    }
+    lines.push(d);
+  }
+  lines.push("");
+  lines.push("ÇIKTI KURALLARI:");
+  lines.push("1) YALNIZCA geçerli bir JSON nesnesi döndür; başka hiçbir metin, açıklama veya kod bloğu işareti ekleme.");
+  lines.push('2) Biçim: {"answers": {"<soru kimliği>": <yanıt>}} — her soru kimliği için bir yanıt.');
+  lines.push('3) Seçenekli sorularda yanıt, verilen SEÇENEK metinlerinden birinin TAM ve AYNEN kopyası olmalı. Onay kutularında yanıt bir dizi olmalı: ["Seçenek 1","Seçenek 2"].');
+  lines.push("4) Kısa yanıt ve paragraf sorularında bu öğrencinin yazacağı biçimde, Türkçe, 1–3 cümlelik doğal bir metin yaz.");
+  lines.push("5) Zorunlu soruları asla boş bırakma.");
+  return lines.join("\n");
+}
+
+async function callLLM(prompt, key){
+  if(S.provider==="gemini"){
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+S.model+":generateContent?key="+encodeURIComponent(key),{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.8,responseMimeType:"application/json"}})
+    });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error?.message || "Gemini isteği başarısız ("+r.status+")");
+    const t = j.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("") || "";
+    if(!t) throw new Error("Gemini boş yanıt döndürdü.");
+    return t;
+  }
+  if(S.provider==="openai"){
+    const r = await fetch("https://api.openai.com/v1/chat/completions",{
+      method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+      body: JSON.stringify({model:S.model, temperature:0.8, response_format:{type:"json_object"}, messages:[{role:"user",content:prompt}]})
+    });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error?.message || "OpenAI isteği başarısız ("+r.status+")");
+    return j.choices?.[0]?.message?.content || "";
+  }
+  // anthropic
+  const r = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body: JSON.stringify({model:S.model, max_tokens:4000, temperature:0.8, messages:[{role:"user",content:prompt}]})
+  });
+  const j = await r.json();
+  if(!r.ok) throw new Error(j.error?.message || "Anthropic isteği başarısız ("+r.status+")");
+  return (j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+}
+
+function extractJSON(text){
+  let t = text.trim().replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if(a===-1||b===-1) throw new Error("Model yanıtında JSON bulunamadı.");
+  return JSON.parse(t.slice(a,b+1));
+}
+
+function bestOption(val, options){
+  const norm = s => String(s).toLocaleLowerCase("tr").replace(/\s+/g," ").trim();
+  const v = norm(val);
+  for(const o of options) if(norm(o)===v) return o;
+  for(const o of options) if(norm(o).startsWith(v)||v.startsWith(norm(o))) return o;
+  for(const o of options) if(norm(o).includes(v)||v.includes(norm(o))) return o;
+  return null;
+}
+
+function validateAnswers(raw){
+  const src = raw.answers || raw;
+  const out = {}; const missing = [];
+  for(const q of S.questions){
+    if(q.autofill==="anon"){ out[q.entryId] = S.anon; continue; }
+    let val = src[q.entryId];
+    if(val===undefined) val = src["SORU["+q.entryId+"]"];
+    if(val===undefined||val===null||val===""){ if(q.required) missing.push(q.title); continue; }
+    if(q.type===4){ // checkbox
+      const arr = (Array.isArray(val)?val:[val]).map(x=>bestOption(x,q.options)).filter(Boolean);
+      if(arr.length) out[q.entryId]=arr; else if(q.required) missing.push(q.title);
+    } else if(q.options.length){ // radio/dropdown/scale/grid
+      const m = bestOption(val, q.options);
+      if(m) out[q.entryId]=m; else if(q.required) missing.push(q.title);
+    } else {
+      out[q.entryId]=String(val);
+    }
+  }
+  return {out, missing};
+}
+
+async function generate(){
+  err("e4");
+  const key = document.getElementById("akey").value.trim();
+  if(!key){ err("e4","API anahtarı bulunamadı; lütfen P3 adımına dönün."); return; }
+  if(!S.questions.length){ err("e4","Önce P2 adımında formu çözümleyin."); return; }
+  const btn=document.getElementById("btnGen");
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Yapay zekâ yanıtlıyor…';
+  try{
+    const prompt = buildPrompt();
+    const rawText = await callLLM(prompt, key);
+    const parsed = extractJSON(rawText);
+    const {out, missing} = validateAnswers(parsed);
+    if(missing.length) throw new Error("Model şu zorunlu soruları geçerli biçimde yanıtlamadı: " + missing.slice(0,3).join("; ") + (missing.length>3?" …":"") + " — lütfen yeniden üretin.");
+    S.attempts++;
+    S.answers = out;
+    S.log.push({attempt:S.attempts, timestamp:new Date().toISOString(), provider:S.provider, model:S.model, temperature:0.8, prompt, raw:rawText});
+    renderQuestions("answers", S.questions, out);
+    btn.textContent = "Yeniden üret (deneme " + (S.attempts+1) + ")";
+    document.getElementById("btnTo5").hidden=false;
+  }catch(e){
+    err("e4", e.message);
+    btn.textContent = S.attempts ? "Yeniden üret" : "Yanıtları üret";
+  }finally{
+    btn.disabled=false;
+    if(btn.querySelector(".spin")) btn.textContent = S.attempts ? "Yeniden üret (deneme "+(S.attempts+1)+")" : "Yanıtları üret";
+  }
+}
+
+/* ================= P5: submit to Google Forms ================= */
+function submitForm(){
+  err("e5");
+  if(!S.answers){ err("e5","Önce P4 adımında yanıtları üretin."); return; }
+  const btn=document.getElementById("btnSend");
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Gönderiliyor…';
+  try{
+    const action = "https://docs.google.com/forms/d/e/" + S.formId + "/formResponse";
+    const f = document.createElement("form");
+    f.method="POST"; f.action=action; f.target="gf_sink"; f.style.display="none"; f.acceptCharset="UTF-8";
+    const add=(n,v)=>{const i=document.createElement("input");i.type="hidden";i.name=n;i.value=v;f.appendChild(i);};
+    for(const q of S.questions){
+      const a = S.answers[q.entryId];
+      if(a===undefined) continue;
+      if(Array.isArray(a)) a.forEach(x=>add("entry."+q.entryId, x));
+      else add("entry."+q.entryId, a);
+    }
+    add("fvv","1");
+    add("pageHistory", Array.from({length:S.pages},(_,i)=>i).join(","));
+    document.body.appendChild(f);
+    f.submit();
+    setTimeout(()=>{ f.remove();
+      document.getElementById("submitCard").hidden=true;
+      document.getElementById("doneCard").hidden=false;
+      document.querySelectorAll(".step").forEach(el=>el.classList.add("done"));
+    }, 1600);
+  }catch(e){
+    err("e5","Gönderim başarısız: "+e.message);
+    btn.disabled=false; btn.textContent="Sentetik yanıtları gönder";
+  }
+}
+
+function downloadLog(){
+  const payload = {
+    tool:"synthetic-student-response-tool v1",
+    anon_code:S.anon, profile:S.profile,
+    form:{id:S.formId, title:S.formTitle, url:S.formUrl, pages:S.pages,
+      questions:S.questions.map(q=>({entryId:q.entryId,title:q.title,type:q.type,options:q.options,required:q.required,autofill:q.autofill||null}))},
+    submitted_answers:S.answers, attempts:S.attempts, generations:S.log
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="sentetik_yanit_kaydi_"+S.anon+"_"+Date.now()+".json";
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+provChanged();
+</script>
+</body>
+</html>
