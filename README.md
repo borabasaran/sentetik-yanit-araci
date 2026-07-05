@@ -64,13 +64,22 @@ Genel proxy'ler (allorigins, codetabs, corsproxy) zaman zaman yavaşlar veya eri
 ```javascript
 function doGet(e) {
   var url = e.parameter.url;
-  if (!url || url.indexOf("https://docs.google.com/forms/") !== 0 && url.indexOf("https://forms.gle/") !== 0) {
-    return ContentService.createTextOutput("invalid url");
+  var cb = e.parameter.callback;
+  var out;
+  if (!url || (url.indexOf("https://docs.google.com/forms/") !== 0 && url.indexOf("https://forms.gle/") !== 0)) {
+    out = "invalid url";
+  } else {
+    out = UrlFetchApp.fetch(url, {followRedirects: true, muteHttpExceptions: true}).getContentText();
   }
-  var html = UrlFetchApp.fetch(url, {followRedirects: true, muteHttpExceptions: true}).getContentText();
-  return ContentService.createTextOutput(html).setMimeType(ContentService.MimeType.TEXT);
+  if (cb) {
+    return ContentService.createTextOutput(cb + "(" + JSON.stringify(out) + ")")
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService.createTextOutput(out).setMimeType(ContentService.MimeType.TEXT);
 }
 ```
+
+Not: Kodu güncellediyseniz **Deploy → Manage deployments → (kalem) Edit → Version: New version → Deploy** yapmalısınız; aksi hâlde eski kod çalışmaya devam eder. Web app URL'si değişmez.
 3. **Deploy → New deployment → Web app** → Execute as: *Me* · Who has access: **Anyone** → Deploy
 4. Çıkan `https://script.google.com/macros/s/…/exec` adresini kopyalayın
 5. `index.html` içinde en üstteki `const CUSTOM_PROXY = "";` satırını şöyle doldurun:
