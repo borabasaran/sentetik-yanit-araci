@@ -76,6 +76,11 @@ footer{margin-top:32px;font-size:12px;color:var(--mist);text-align:center;line-h
   <label for="akey">API anahtarı</label>
   <input type="password" id="akey" autocomplete="off" placeholder="API anahtarınızı yapıştırın" oninput="detectProvider()">
   <div id="provInfo" class="note ok" hidden></div>
+  <div id="provPick" hidden style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+    <button type="button" class="ghost" style="width:auto;margin-top:0;padding:8px 14px" onclick="pickProv('gemini')">Gemini</button>
+    <button type="button" class="ghost" style="width:auto;margin-top:0;padding:8px 14px" onclick="pickProv('openai')">OpenAI / ChatGPT</button>
+    <button type="button" class="ghost" style="width:auto;margin-top:0;padding:8px 14px" onclick="pickProv('anthropic')">Claude</button>
+  </div>
   <p class="hint" style="margin-top:10px">Anahtarınız yok mu? Buradan alabilirsiniz:
     <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--teal-dk);font-weight:600">Gemini (ücretsiz)</a> ·
     <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:var(--teal-dk)">OpenAI</a> ·
@@ -131,35 +136,53 @@ const MODEL_CHAIN = {
   anthropic: ["claude-sonnet-4-6","claude-haiku-4-5-20251001","claude-3-5-haiku-latest"]
 };
 const PROVNAME = {gemini:"Google Gemini", openai:"OpenAI (ChatGPT)", anthropic:"Anthropic (Claude)"};
+function cleanKey(raw){
+  return String(raw||"").replace(/[\s"'\u200B-\u200D\uFEFF]/g,"");
+}
 function whichProvider(key){
-  if(/^AIza/.test(key)) return "gemini";
+  if(/AIza[0-9A-Za-z_\-]{20,}/.test(key)) return "gemini";
   if(/^sk-ant-/.test(key)) return "anthropic";
   if(/^sk-/.test(key)) return "openai";
   return null;
 }
 function detectProvider(){
-  const key = document.getElementById("akey").value.trim();
+  const key = cleanKey(document.getElementById("akey").value);
   const box = document.getElementById("provInfo");
-  if(!key){ box.hidden=true; S.provider=null; return; }
+  const pick = document.getElementById("provPick");
+  if(!key){ box.hidden=true; pick.hidden=true; S.provider=null; return; }
   const p = whichProvider(key);
   if(p){
-    S.provider = p;
+    S.provider = p; S.providerManual = false;
     box.className = "note ok";
     box.textContent = "✓ " + PROVNAME[p] + " anahtarı algılandı — model otomatik seçilecek.";
+    box.hidden = false; pick.hidden = true;
+  } else if(S.providerManual && S.provider){
+    box.className = "note ok";
+    box.textContent = "✓ Sağlayıcı elle seçildi: " + PROVNAME[S.provider] + ".";
+    box.hidden = false; pick.hidden = false;
   } else {
-    S.provider = "gemini";
+    S.provider = null;
     box.className = "note warn";
-    box.textContent = "Anahtar türü tanınamadı; Gemini anahtarı olarak denenecek. Anahtarı eksiksiz yapıştırdığınızdan emin olun.";
+    box.textContent = "Anahtar türü otomatik tanınamadı. Sorun değil — aşağıdan hangi yapay zekâyı kullandığınızı seçmeniz yeterli:";
+    box.hidden = false; pick.hidden = false;
   }
-  box.hidden = false;
+}
+function pickProv(p){
+  S.provider = p; S.providerManual = true;
+  detectProvider();
 }
 function err(id,msg){const e=document.getElementById(id); if(!msg){e.hidden=true;return;} e.textContent=msg; e.hidden=false;}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 
 /* ---------- Google Form fetch & parse ---------- */
+// İsterseniz kendi proxy'nizi kurun (README'de Google Apps Script örneği var) ve adresini buraya yazın:
+const CUSTOM_PROXY = ""; // ör. "https://script.google.com/macros/s/.../exec?url="
 const PROXIES = [
-  u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
-  u => "https://corsproxy.io/?url=" + encodeURIComponent(u)
+  { name:"custom",     ok:()=>!!CUSTOM_PROXY, make:u=>CUSTOM_PROXY+encodeURIComponent(u), read:async r=>r.text() },
+  { name:"allorigins-raw", ok:()=>true, make:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u), read:async r=>r.text() },
+  { name:"allorigins-get", ok:()=>true, make:u=>"https://api.allorigins.win/get?url="+encodeURIComponent(u), read:async r=>{const j=await r.json(); return j.contents||"";} },
+  { name:"codetabs",   ok:()=>true, make:u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u), read:async r=>r.text() },
+  { name:"corsproxy",  ok:()=>true, make:u=>"https://corsproxy.io/?url="+encodeURIComponent(u), read:async r=>r.text() }
 ];
 function normalizeFormUrl(raw){
   let u = raw.trim();
@@ -174,17 +197,24 @@ function normalizeFormUrl(raw){
   return null;
 }
 async function fetchViaProxies(url){
-  let lastErr = null;
+  const fails = [];
   for(const p of PROXIES){
+    if(!p.ok()) continue;
+    const ctrl = new AbortController();
+    const tid = setTimeout(()=>ctrl.abort(), 14000);
     try{
-      const r = await fetch(p(url), {cache:"no-store"});
-      if(!r.ok) throw new Error("HTTP "+r.status);
-      const t = await r.text();
+      const r = await fetch(p.make(url), {cache:"no-store", signal:ctrl.signal});
+      clearTimeout(tid);
+      if(!r.ok){ fails.push(p.name+": HTTP "+r.status); continue; }
+      const t = await p.read(r);
       if(t && t.includes("FB_PUBLIC_LOAD_DATA_")) return t;
-      lastErr = new Error("Form verisi bulunamadı (form oturum gerektiriyor olabilir).");
-    }catch(e){ lastErr = e; }
+      fails.push(p.name+": form verisi yok");
+    }catch(e){
+      clearTimeout(tid);
+      fails.push(p.name+": "+(e.name==="AbortError"?"zaman aşımı":(e.message||"ağ hatası")));
+    }
   }
-  throw lastErr || new Error("Bağlantı kurulamadı.");
+  throw new Error("Ara sunucuların hiçbirinden ulaşılamadı ("+fails.join(" · ")+"). Birkaç saniye sonra tekrar deneyin; sorun sürerse farklı bir ağ/tarayıcı deneyin veya reklam engelleyiciyi bu sayfa için kapatın.");
 }
 function parseForm(html){
   const m = html.match(/FB_PUBLIC_LOAD_DATA_\s*=\s*(\[[\s\S]*?\]);\s*<\/script>/);
@@ -330,7 +360,8 @@ function isAuthError(e){
   return e.http===401 || e.http===403 || /api key|apikey|unauthorized|invalid.*key|permission/i.test(e.message||"");
 }
 async function callLLM(prompt, key){
-  const provider = S.provider || whichProvider(key) || "gemini";
+  const provider = S.provider || whichProvider(key);
+  if(!provider) throw new Error("Yapay zekâ sağlayıcısı belirlenemedi — 1. bölümde anahtarınızın altındaki düğmelerden hangi yapay zekâyı kullandığınızı seçin.");
   S.provider = provider;
   let lastErr = null;
   for(const model of MODEL_CHAIN[provider]){
@@ -383,7 +414,7 @@ function validateAnswers(raw){
 }
 async function generate(){
   err("e4"); err("e5");
-  const key = document.getElementById("akey").value.trim();
+  const key = cleanKey(document.getElementById("akey").value);
   if(!key){ err("e4","Lütfen 1. bölümde API anahtarınızı girin."); return; }
   const btn=document.getElementById("btnGen");
   btn.disabled=true; btn.innerHTML='<span class="spin"></span>Yapay zekâ yanıtlıyor…';
