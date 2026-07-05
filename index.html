@@ -66,30 +66,21 @@ footer{margin-top:32px;font-size:12px;color:var(--mist);text-align:center;line-h
 <header>
   <div class="kicker">Sentetik Öğrenci Sesi Araştırması</div>
   <h1>Anketi yapay zekânız yanıtlasın</h1>
-  <p class="sub">Araştırmacının size gönderdiği Google Forms linkini yapıştırın; kullandığınız yapay zekâ (varsayılan: Gemini) anketi sizin yerinize yanıtlayıp gönderecek. API anahtarınız yalnızca tarayıcınızda kalır — hiçbir sunucuya kaydedilmez.</p>
+  <p class="sub">Araştırmacının size gönderdiği Google Forms linkini yapıştırın; kullandığınız yapay zekâ anketi sizin yerinize yanıtlayıp gönderecek. API anahtarınız yalnızca tarayıcınızda kalır — hiçbir sunucuya kaydedilmez.</p>
 </header>
 
 <!-- 1: API -->
 <div class="card">
   <h2><span class="num">1</span>Yapay zekâ erişiminiz</h2>
-  <p class="hint">Anahtar, tarayıcınızdan doğrudan yapay zekâ sağlayıcısına gönderilir; bu sayfada saklanmaz.</p>
-  <div class="grid2">
-    <div>
-      <label for="prov">Sağlayıcı</label>
-      <select id="prov" onchange="provChanged()">
-        <option value="gemini" selected>Google Gemini (önerilen)</option>
-        <option value="openai">OpenAI (ChatGPT)</option>
-        <option value="anthropic">Anthropic (Claude)</option>
-      </select>
-    </div>
-    <div>
-      <label for="model">Model</label>
-      <select id="model"></select>
-    </div>
-  </div>
+  <p class="hint">Kullandığınız yapay zekânın API anahtarını yapıştırmanız yeterli — sağlayıcı ve model otomatik belirlenir. Anahtar, tarayıcınızdan doğrudan yapay zekâ sağlayıcısına gönderilir; bu sayfada saklanmaz.</p>
   <label for="akey">API anahtarı</label>
-  <input type="password" id="akey" autocomplete="off" placeholder="API anahtarınızı yapıştırın">
-  <p class="hint" id="keyhelp" style="margin:8px 0 0"></p>
+  <input type="password" id="akey" autocomplete="off" placeholder="API anahtarınızı yapıştırın" oninput="detectProvider()">
+  <div id="provInfo" class="note ok" hidden></div>
+  <p class="hint" style="margin-top:10px">Anahtarınız yok mu? Buradan alabilirsiniz:
+    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--teal-dk);font-weight:600">Gemini (ücretsiz)</a> ·
+    <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:var(--teal-dk)">OpenAI</a> ·
+    <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--teal-dk)">Claude</a>
+  </p>
 </div>
 
 <!-- 2: Link -->
@@ -100,11 +91,6 @@ footer{margin-top:32px;font-size:12px;color:var(--mist);text-align:center;line-h
   <input type="text" id="flink" autocomplete="off" placeholder="https://forms.gle/… veya https://docs.google.com/forms/…">
   <label for="anon">Anonim kodunuz <small>(araştırmacı sizden bir kod istediyse; formda kod sorusu varsa otomatik yazılır)</small></label>
   <input type="text" id="anon" autocomplete="off" placeholder="isteğe bağlı — ör. AY0342">
-  <details>
-    <summary>İsteğe bağlı: yapay zekâ sizi tanısın (profil metni)</summary>
-    <p class="hint" style="margin-top:8px">Araştırmacı istediyse, kendinizi tanıtan kısa metni buraya yapıştırın; yapay zekâ anketi bu profildeki bir öğrenci gibi yanıtlar. Boş bırakılırsa "tipik bir üniversite öğrencisi" olarak yanıtlar.</p>
-    <textarea id="ptext" placeholder="Öğrenme alışkanlıklarım, yapay zekâya yaklaşımım…"></textarea>
-  </details>
   <div id="e2" class="note err" hidden></div>
   <div id="ok2" class="note ok" hidden></div>
   <button class="primary" id="btnFetch" onclick="fetchForm()">Anketi getir</button>
@@ -139,20 +125,33 @@ footer{margin-top:32px;font-size:12px;color:var(--mist);text-align:center;line-h
 "use strict";
 const S = { formUrl:"", formTitle:"", formId:"", pages:1, questions:[], answers:null, attempts:0, provider:"gemini", model:"", log:[] };
 
-const MODELS = {
-  gemini:    ["gemini-2.5-flash","gemini-2.5-pro","gemini-2.0-flash"],
+const MODEL_CHAIN = {
+  gemini:    ["gemini-2.5-flash","gemini-2.0-flash","gemini-1.5-flash"],
   openai:    ["gpt-4o-mini","gpt-4o","gpt-4.1-mini"],
-  anthropic: ["claude-sonnet-4-6","claude-haiku-4-5-20251001"]
+  anthropic: ["claude-sonnet-4-6","claude-haiku-4-5-20251001","claude-3-5-haiku-latest"]
 };
-const KEYHELP = {
-  gemini: "Ücretsiz anahtar: aistudio.google.com → \"Get API key\".",
-  openai: "Anahtar: platform.openai.com → API keys (kullanım ücretlidir).",
-  anthropic: "Anahtar: console.anthropic.com (kullanım ücretlidir)."
-};
-function provChanged(){
-  S.provider = document.getElementById("prov").value;
-  document.getElementById("model").innerHTML = MODELS[S.provider].map(m=>'<option>'+m+'</option>').join("");
-  document.getElementById("keyhelp").textContent = KEYHELP[S.provider];
+const PROVNAME = {gemini:"Google Gemini", openai:"OpenAI (ChatGPT)", anthropic:"Anthropic (Claude)"};
+function whichProvider(key){
+  if(/^AIza/.test(key)) return "gemini";
+  if(/^sk-ant-/.test(key)) return "anthropic";
+  if(/^sk-/.test(key)) return "openai";
+  return null;
+}
+function detectProvider(){
+  const key = document.getElementById("akey").value.trim();
+  const box = document.getElementById("provInfo");
+  if(!key){ box.hidden=true; S.provider=null; return; }
+  const p = whichProvider(key);
+  if(p){
+    S.provider = p;
+    box.className = "note ok";
+    box.textContent = "✓ " + PROVNAME[p] + " anahtarı algılandı — model otomatik seçilecek.";
+  } else {
+    S.provider = "gemini";
+    box.className = "note warn";
+    box.textContent = "Anahtar türü tanınamadı; Gemini anahtarı olarak denenecek. Anahtarı eksiksiz yapıştırdığınızdan emin olun.";
+  }
+  box.hidden = false;
 }
 function err(id,msg){const e=document.getElementById(id); if(!msg){e.hidden=true;return;} e.textContent=msg; e.hidden=false;}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -270,17 +269,9 @@ function renderQuestions(elId, qs, answers){
 
 /* ---------- prompt + LLM ---------- */
 function buildPrompt(){
-  const ptext = document.getElementById("ptext").value.trim();
   const lines = [];
-  if(ptext){
-    lines.push("Aşağıda bir üniversite öğrencisinin kendini tanıttığı kısa metin verilmiştir. Bu öğrenci gibi davranarak anketi doldur.");
-    lines.push("Yanıtların bu öğrencinin GERÇEKÇİ yanıtları olmalı; ideal veya örnek bir öğrenci gibi değil, bu profildeki gerçek bir öğrenci gibi yanıtla. Kararsızlık, tereddüt veya olumsuz görüş varsa bunları da yansıt.");
-    lines.push("");
-    lines.push("ÖĞRENCİ PROFİLİ: \"" + ptext + "\"");
-  } else {
-    lines.push("Bir Türk devlet üniversitesinde okuyan tipik bir lisans öğrencisi gibi davran ve aşağıdaki anketi bu öğrencinin vereceği yanıtlarla doldur.");
-    lines.push("Yanıtlar GERÇEKÇİ olmalı; ideal veya örnek bir öğrenci gibi değil, gerçek bir öğrenci gibi yanıtla. Kararsızlık, tereddüt veya olumsuz görüş varsa bunları da yansıt.");
-  }
+  lines.push("Bir Türk devlet üniversitesinde okuyan tipik bir lisans öğrencisi gibi davran ve aşağıdaki anketi bu öğrencinin vereceği yanıtlarla doldur.");
+  lines.push("Yanıtlar GERÇEKÇİ olmalı; ideal veya örnek bir öğrenci gibi değil, gerçek bir öğrenci gibi yanıtla. Kararsızlık, tereddüt veya olumsuz görüş varsa bunları da yansıt.");
   lines.push("");
   lines.push("ANKET SORULARI (her sorunun bir kimliği vardır):");
   for(const q of S.questions){
@@ -301,35 +292,59 @@ function buildPrompt(){
   lines.push("5) Zorunlu soruları asla boş bırakma.");
   return lines.join("\n");
 }
-async function callLLM(prompt, key){
-  if(S.provider==="gemini"){
-    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+S.model+":generateContent?key="+encodeURIComponent(key),{
+async function callOnce(provider, model, prompt, key){
+  if(provider==="gemini"){
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key),{
       method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.8,responseMimeType:"application/json"}})
     });
     const j = await r.json();
-    if(!r.ok) throw new Error(j.error?.message || "Gemini isteği başarısız ("+r.status+")");
+    if(!r.ok){ const e=new Error(j.error?.message||("Gemini isteği başarısız ("+r.status+")")); e.http=r.status; throw e; }
     const t = j.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("") || "";
-    if(!t) throw new Error("Gemini boş yanıt döndürdü.");
+    if(!t) throw new Error("Model boş yanıt döndürdü.");
     return t;
   }
-  if(S.provider==="openai"){
+  if(provider==="openai"){
     const r = await fetch("https://api.openai.com/v1/chat/completions",{
       method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
-      body: JSON.stringify({model:S.model, temperature:0.8, response_format:{type:"json_object"}, messages:[{role:"user",content:prompt}]})
+      body: JSON.stringify({model, temperature:0.8, response_format:{type:"json_object"}, messages:[{role:"user",content:prompt}]})
     });
     const j = await r.json();
-    if(!r.ok) throw new Error(j.error?.message || "OpenAI isteği başarısız ("+r.status+")");
+    if(!r.ok){ const e=new Error(j.error?.message||("OpenAI isteği başarısız ("+r.status+")")); e.http=r.status; throw e; }
     return j.choices?.[0]?.message?.content || "";
   }
   const r = await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
     headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-    body: JSON.stringify({model:S.model, max_tokens:4000, temperature:0.8, messages:[{role:"user",content:prompt}]})
+    body: JSON.stringify({model, max_tokens:4000, temperature:0.8, messages:[{role:"user",content:prompt}]})
   });
   const j = await r.json();
-  if(!r.ok) throw new Error(j.error?.message || "Anthropic isteği başarısız ("+r.status+")");
+  if(!r.ok){ const e=new Error(j.error?.message||("Anthropic isteği başarısız ("+r.status+")")); e.http=r.status; throw e; }
   return (j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+}
+function isModelNotFound(e){
+  const m = (e.message||"").toLowerCase();
+  return e.http===404 || m.includes("not found") || m.includes("does not exist") || m.includes("model");
+}
+function isAuthError(e){
+  return e.http===401 || e.http===403 || /api key|apikey|unauthorized|invalid.*key|permission/i.test(e.message||"");
+}
+async function callLLM(prompt, key){
+  const provider = S.provider || whichProvider(key) || "gemini";
+  S.provider = provider;
+  let lastErr = null;
+  for(const model of MODEL_CHAIN[provider]){
+    try{
+      const out = await callOnce(provider, model, prompt, key);
+      S.model = model;
+      return out;
+    }catch(e){
+      if(isAuthError(e)) throw new Error("API anahtarı doğrulanamadı: " + e.message + " — anahtarı kontrol edip yeniden yapıştırın.");
+      lastErr = e;
+      if(!isModelNotFound(e)) throw e;
+    }
+  }
+  throw lastErr || new Error("Uygun model bulunamadı.");
 }
 function extractJSON(text){
   let t = text.trim().replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
@@ -370,7 +385,6 @@ async function generate(){
   err("e4"); err("e5");
   const key = document.getElementById("akey").value.trim();
   if(!key){ err("e4","Lütfen 1. bölümde API anahtarınızı girin."); return; }
-  S.model = document.getElementById("model").value;
   const btn=document.getElementById("btnGen");
   btn.disabled=true; btn.innerHTML='<span class="spin"></span>Yapay zekâ yanıtlıyor…';
   try{
@@ -428,7 +442,6 @@ function downloadLog(){
   const payload = {
     tool:"synthetic-student-response-tool v2",
     anon_code: document.getElementById("anon").value.trim() || null,
-    profile_text: document.getElementById("ptext").value.trim() || null,
     form:{id:S.formId, title:S.formTitle, url:S.formUrl, pages:S.pages,
       questions:S.questions.map(q=>({entryId:q.entryId,title:q.title,type:q.type,options:q.options,required:q.required,autofill:q.autofill||null}))},
     submitted_answers:S.answers, attempts:S.attempts, generations:S.log
@@ -439,7 +452,6 @@ function downloadLog(){
   a.download="llm_yanit_kaydi_"+Date.now()+".json";
   a.click(); URL.revokeObjectURL(a.href);
 }
-provChanged();
 </script>
 </body>
 </html>
