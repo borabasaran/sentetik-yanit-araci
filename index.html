@@ -178,7 +178,12 @@ function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",
 // Kendi proxy'niz (README'de Google Apps Script örneği var) iki yolla tanımlanabilir:
 // 1) Öğrencilere verdiğiniz linke parametre olarak: .../?proxy=https://script.google.com/macros/s/.../exec?url=
 // 2) Ya da aşağıdaki sabite doğrudan yazarak.
-const CUSTOM_PROXY = new URLSearchParams(location.search).get("proxy") || "";
+const CUSTOM_PROXY = (function(){
+  let p = (new URLSearchParams(location.search).get("proxy") || "").trim();
+  if(!p) return "";
+  if(!/[?&]url=$/.test(p)) p += (p.includes("?") ? "&" : "?") + "url=";
+  return p;
+})();
 const PROXIES = [
   { name:"custom",     ok:()=>!!CUSTOM_PROXY, make:u=>CUSTOM_PROXY+encodeURIComponent(u), read:async r=>r.text() },
   { name:"allorigins-raw", ok:()=>true, make:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u), read:async r=>r.text() },
