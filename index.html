@@ -178,14 +178,11 @@ function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",
 // Kendi proxy'niz (README'de Google Apps Script örneği var) iki yolla tanımlanabilir:
 // 1) Öğrencilere verdiğiniz linke parametre olarak: .../?proxy=https://script.google.com/macros/s/.../exec?url=
 // 2) Ya da aşağıdaki sabite doğrudan yazarak.
-const CUSTOM_PROXY = (function(){
+const CUSTOM_PROXY_BASE = (function(){
   let p = (new URLSearchParams(location.search).get("proxy") || "").trim();
-  if(!p) return "";
-  if(!/[?&]url=$/.test(p)) p += (p.includes("?") ? "&" : "?") + "url=";
-  return p;
+  return p.replace(/[?&]url=$/,"");
 })();
 const PROXIES = [
-  { name:"custom",     ok:()=>!!CUSTOM_PROXY, make:u=>CUSTOM_PROXY+encodeURIComponent(u), read:async r=>r.text() },
   { name:"allorigins-raw", ok:()=>true, make:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u), read:async r=>r.text() },
   { name:"allorigins-get", ok:()=>true, make:u=>"https://api.allorigins.win/get?url="+encodeURIComponent(u), read:async r=>{const j=await r.json(); return j.contents||"";} },
   { name:"codetabs",   ok:()=>true, make:u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u), read:async r=>r.text() },
@@ -203,8 +200,37 @@ function normalizeFormUrl(raw){
   }
   return null;
 }
+function jsonpFetch(base, url, timeoutMs){
+  return new Promise((resolve,reject)=>{
+    const cbName = "gfcb_" + Math.random().toString(36).slice(2);
+    const s = document.createElement("script");
+    const tid = setTimeout(()=>{ cleanup(); reject(new Error("zaman aşımı")); }, timeoutMs);
+    function cleanup(){ clearTimeout(tid); try{ delete window[cbName]; }catch(_){} s.remove(); }
+    window[cbName] = data => { cleanup(); resolve(String(data)); };
+    s.onerror = ()=>{ cleanup(); reject(new Error("script yüklenemedi")); };
+    s.src = base + (base.includes("?") ? "&" : "?") + "url=" + encodeURIComponent(url) + "&callback=" + cbName;
+    document.head.appendChild(s);
+  });
+}
 async function fetchViaProxies(url){
   const fails = [];
+  // 1) Araştırmacının kendi proxy'si: önce JSONP (CORS'a takılmaz), sonra fetch
+  if(CUSTOM_PROXY_BASE){
+    try{
+      const t = await jsonpFetch(CUSTOM_PROXY_BASE, url, 20000);
+      if(t && t.includes("FB_PUBLIC_LOAD_DATA_")) return t;
+      if(t === "invalid url") fails.push("custom: proxy linki reddetti (form adresi hatalı)");
+      else fails.push("custom-jsonp: form verisi yok — Apps Script kodunun güncel (callback destekli) sürüm olduğundan ve dağıtımın 'Anyone' olduğundan emin olun");
+    }catch(e){ fails.push("custom-jsonp: "+e.message); }
+    try{
+      const ctrl = new AbortController(); const tid = setTimeout(()=>ctrl.abort(), 14000);
+      const r = await fetch(CUSTOM_PROXY_BASE + (CUSTOM_PROXY_BASE.includes("?")?"&":"?") + "url=" + encodeURIComponent(url), {cache:"no-store", signal:ctrl.signal});
+      clearTimeout(tid);
+      if(r.ok){ const t = await r.text(); if(t && t.includes("FB_PUBLIC_LOAD_DATA_")) return t; fails.push("custom-fetch: form verisi yok"); }
+      else fails.push("custom-fetch: HTTP "+r.status);
+    }catch(e){ fails.push("custom-fetch: "+(e.name==="AbortError"?"zaman aşımı":(e.message||"ağ hatası"))); }
+  }
+  // 2) Genel proxy yedekleri
   for(const p of PROXIES){
     if(!p.ok()) continue;
     const ctrl = new AbortController();
