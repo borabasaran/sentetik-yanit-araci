@@ -31,17 +31,17 @@ Sentetik formda ayarlar:
 1. **P1 — Kod ve profil:** Anonim kod + kısa profil + A10 tanıtım metni (1. oturumdakiyle aynı).
 2. **P2 — Anket linki:** Sentetik form linki yapıştırılır; araç formu getirir, soruları ve `entry` kimliklerini listeler.
 3. **P3 — Yapay zekâ erişimi:** Sağlayıcı (Gemini varsayılan; OpenAI ve Claude da desteklenir), model ve API anahtarı. Anahtar yalnızca tarayıcıdan doğrudan sağlayıcıya gider; sayfada saklanmaz, hiçbir sunucuya iletilmez.
-4. **P4 — Yanıt üretimi:** Araç, Ek-4'teki profil-temelli prompt şablonunu kullanır ("ideal değil, gerçekçi öğrenci" yönergesi; temperature = 0.8). Yanıtlar salt-okunur gösterilir; öğrenci düzenleyemez, yalnızca yeniden üretebilir ve **deneme sayısı loglanır**.
-5. **P5 — Gönderim:** Yanıtlar Google Forms'a gönderilir. Öğrenci isterse üretim kaydını (JSON: prompt, model, ham çıktı, deneme sayısı, zaman damgası) indirebilir — bu dosyanın araştırmacıya iletilmesi istenirse yönergede belirtin; `generation_log` için değerli ek veridir.
+4. **P4 — Yanıt üretimi:** Araç, kısa profil ve A10 metnini prompta açıkça ekler; modelden bu bilgilerle çelişmeyen, idealize edilmemiş öğrenci yanıtları ister (temperature = 0.8). Yanıtlar salt-okunur gösterilir; öğrenci düzenleyemez, yalnızca yeniden üretebilir ve **deneme sayısı loglanır**. Üretim 45 saniyede zaman aşımına uğrar ve kullanıcı işlemi iptal edebilir.
+5. **P5 — Gönderim:** Yanıtlar Google Forms'a gizli form POST'u ile iletilir. Google sonucu farklı kökenden olduğu için tarayıcı kesin teslim bilgisini okuyamaz; uygulama yalnızca **iletim denendi** der. Araştırmacı yanıtı Forms → Yanıtlar bölümünde doğrulamalıdır. Öğrenci isterse üretim kaydını (JSON: prompt, model, ham çıktı, deneme sayısı, zaman damgası) indirebilir.
 
 ---
 
 ## 4. Teknik Notlar ve Sınırlılıklar
 
-- **CORS proxy:** Google Forms sayfası tarayıcıdan doğrudan okunamaz (CORS). Araç, formu çekmek için sırasıyla `allorigins.win` ve `corsproxy.io` genel proxy'lerini dener. Bu ücretsiz hizmetler zaman zaman yavaş/erişilemez olabilir; uygulama öncesinde mutlaka pilot test yapın. Daha güvenilir istenirse, tek dosyalık bir Cloudflare Worker proxy'si kurulup `PROXIES` dizisindeki adres değiştirilebilir (kod içinde işaretli).
-- **Gönderim mekanizması:** Yanıtlar `formResponse` uç noktasına gizli form POST'u ile iletilir. Tarayıcı güvenliği nedeniyle Google'dan dönen sonuç okunamaz; araç gönderimi "iletildi" olarak raporlar. **Pilotta mutlaka doğrulayın:** test gönderimi yapıp formun Yanıtlar sekmesinde göründüğünü kontrol edin.
-- **Model listesi:** Gemini: `gemini-2.5-flash` (varsayılan), `gemini-2.5-pro`, `gemini-2.0-flash`. Model adları zamanla değişebilir; `MODELS` sabitinden güncellenebilir.
-- **Gizlilik:** Sayfa hiçbir veri saklamaz (localStorage/çerez yok). LLM'e giden tek şey anonim profil + anket soruları; anonim kod dahi LLM'e gönderilmez (forma araç tarafından doğrudan yazılır — Ek-4 ile uyumlu).
+- **Form okuma aracısı:** Google Forms sayfası tarayıcıdan doğrudan okunamadığı için araç yalnızca `DEFAULT_PROXY` ile yapılandırılmış Google Apps Script aracısını kullanır. Genel, üçüncü taraf CORS proxy'lerine veri göndermez. Form bağlantısı ve form soruları bu aracıdan geçer; araştırma öncesinde aracının sahipliği ve erişim politikası doğrulanmalıdır.
+- **Gönderim mekanizması:** Yanıtlar `formResponse` uç noktasına gizli form POST'u ile iletilir. Tarayıcı güvenliği nedeniyle Google'dan dönen sonuç okunamaz; araç kesin başarı iddiasında bulunmaz. **Pilotta ve uygulamada doğrulayın:** gönderimden sonra formun Yanıtlar sekmesinde kaydın göründüğünü kontrol edin.
+- **Model listesi:** Gemini, OpenAI ve Anthropic için model zincirleri `MODEL_CHAIN` sabitinde tanımlıdır. Model adları zamanla değişebileceği için pilot öncesinde sağlayıcı hesaplarıyla doğrulanmalıdır.
+- **Gizlilik:** Sayfa kalıcı tarayıcı depolaması kullanmaz. Form bağlantısı ve sorular Google Apps Script aracısından geçer. LLM'e kısa profil, A10 metni ve anket soruları gider; anonim kod LLM'e gönderilmez ve yalnız forma yazılır. API anahtarı yalnız seçilen model sağlayıcısına gönderilir. İndirilen üretim kaydı profil/A10 içeren promptu ve anonim kodu içerir; güvenli saklanmalıdır.
 - **Zorunlu soru koruması:** Model zorunlu bir soruyu geçerli seçenekle yanıtlamazsa gönderime izin verilmez; öğrenciden yeniden üretmesi istenir.
 
 ## 5. Pilot Kontrol Listesi
@@ -55,9 +55,9 @@ Sentetik formda ayarlar:
 
 ---
 
-## 6. Kalıcı Çözüm: Kendi Proxy'niz (Google Apps Script — 3 dakika, ücretsiz)
+## 6. Form Aracısı: Google Apps Script
 
-Genel proxy'ler (allorigins, codetabs, corsproxy) zaman zaman yavaşlar veya erişilemez olur. En güvenilir yol, formu Google'ın kendi altyapısı üzerinden okuyan küçük bir Apps Script kurmaktır:
+Araç yalnızca formu Google'ın altyapısı üzerinden okuyan bir Apps Script aracısı kullanır:
 
 1. **script.google.com** → New project
 2. Editöre şunu yapıştırın:
