@@ -1,10 +1,10 @@
 // Sentetik Yanıt Aracı: sürüm imzası. Görünür bir değişiklik yayınlandığında SURUM'u artırın;
-// sayfaların altında "© 2026 Sentetik Yanıt Aracı v9.1 by bbasaran" olarak görünür.
+// sayfaların altında "© 2026 Sentetik Yanıt Aracı v10.0 by bbasaran" olarak görünür.
 // "bbasaran" bbasaran.net'e bağlanır; yazı çevresindeki metinle aynı görünür,
 // altı çizilmez ve rengi değişmez, yalnızca üzerine gelince altçizgi belirir.
 (function () {
   var AD = 'Sentetik Yanıt Aracı';
-  var SURUM = '9.1';
+  var SURUM = '10.0';
   var YAZAR = 'bbasaran';
   var YAZAR_URL = 'https://bbasaran.net';
 
